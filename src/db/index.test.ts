@@ -34,7 +34,7 @@ describe('schema del database', () => {
     await chiudiDb();
     const dopo = await getDb();
     expect(dopo).not.toBe(prima);
-    await dopo.put('impostazioni', { obiettivoKcal: 2000 }, 'impostazioni');
-    expect(await dopo.get('impostazioni', 'impostazioni')).toEqual({ obiettivoKcal: 2000 });
+    await dopo.put('impostazioni', { obiettivoKcal: 2000, ultimoBackup: null }, 'impostazioni');
+    expect(await dopo.get('impostazioni', 'impostazioni')).toEqual({ obiettivoKcal: 2000, ultimoBackup: null });
   });
 });

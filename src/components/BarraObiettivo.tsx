@@ -7,7 +7,9 @@ interface Props {
 }
 
 /** Barra di avanzamento delle kcal del giorno rispetto all'obiettivo. */
-export function BarraObiettivo({ kcal, obiettivoKcal }: Props) {
+export function BarraObiettivo({ kcal: kcalEsatte, obiettivoKcal }: Props) {
+  // Si calcola sulle kcal arrotondate che vengono mostrate, così consumate + rimanenti = obiettivo.
+  const kcal = Math.round(kcalEsatte);
   const avanzamento = avanzamentoObiettivo(kcal, obiettivoKcal);
   if (!avanzamento || obiettivoKcal === null) {
     return <p class="nota">Imposta un obiettivo giornaliero nelle Impostazioni per vedere la barra di avanzamento.</p>;
@@ -20,7 +22,7 @@ export function BarraObiettivo({ kcal, obiettivoKcal }: Props) {
         aria-label="Kcal rispetto all'obiettivo"
         aria-valuemin={0}
         aria-valuemax={obiettivoKcal}
-        aria-valuenow={Math.round(kcal)}
+        aria-valuenow={kcal}
       >
         <div class="barra-riempimento" style={{ width: `${avanzamento.percentualeBarra}%` }} />
       </div>

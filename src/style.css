@@ -527,8 +527,32 @@ legend {
   margin: 0.5rem 0 0;
 }
 
-.informazioni {
+.informazioni,
+.backup {
   margin-top: 2rem;
+}
+
+.backup h2 {
+  margin-bottom: 0.5rem;
+}
+
+.azioni-colonna {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.conferma-importazione {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--rosso);
+  border-radius: var(--raggio);
+  background: var(--superficie);
+}
+
+.conferma-importazione p {
+  margin: 0 0 0.75rem;
 }
 
 .informazioni h2 {

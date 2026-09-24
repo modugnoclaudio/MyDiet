@@ -68,4 +68,6 @@ export interface VoceDiario {
 export interface Impostazioni {
   /** obiettivo giornaliero di kcal; `null` = non impostato */
   obiettivoKcal: number | null;
+  /** data (`YYYY-MM-DD`) dell'ultima esportazione dei dati; `null` = mai */
+  ultimoBackup: string | null;
 }
