@@ -42,13 +42,17 @@ public/           # asset statici (icone)
 
 Un solo utente per dispositivo, niente account.
 
-- **Alimenti di base**: tabella statica di alimenti comuni e uguali per tutti (frutta, verdura…) in `src/data/`, inclusa nell'app e non modificabile dall'utente.
+- **Alimenti di base**: tabella statica di alimenti comuni e uguali per tutti in `src/data/`, inclusa nell'app e non modificabile dall'utente. Fonte: tabelle di composizione **CREA** (alimentinutrizione.it), che si possono riprodurre solo **citando la fonte**: l'app deve mostrare *"Fonte: CREA Centro di ricerca Alimenti e Nutrizione – www.alimentinutrizione.it"*. Categorie CREA incluse: Frutta, Verdure e ortaggi, Legumi, Frutta secca a guscio e semi oleaginosi, Cereali e derivati, Carni fresche, Prodotti della pesca, Uova, Latte e yogurt, Oli e grassi (crudi e cotti). I prodotti che variano per marca (dolci, formaggi, salumi…) li inserisce l'utente.
+- **Veridicità dei dati**: ogni alimento di base deve superare il controllo di coerenza delle kcal (`verificaKcal` con `FATTORI_CREA`, metodo di Southgate); discrepanze con i dati USDA vanno segnalate, non corrette a mano.
 - **Alimenti personali**: creati dall'utente e salvati in IndexedDB, con **nome** e **marca** (facoltativa). Nome + marca identificano l'alimento: due yogurt di marche diverse sono due alimenti distinti.
-- **Valori nutrizionali per 100 g**: kcal, carboidrati, proteine e grassi obbligatori; fibre facoltative (assenti ≠ 0).
-- **Diario giornaliero**: ogni voce ha data (`YYYY-MM-DD`), pasto (colazione, pranzo, cena, spuntino), alimento e grammi. La voce salva una copia di nome, marca e valori dell'alimento, così modificare un alimento non altera lo storico.
+- **Valori nutrizionali per 100 g**: kcal, carboidrati, proteine e grassi obbligatori; fibre facoltative (assenti ≠ 0). All'inserimento di un alimento personale l'app avvisa se le kcal non tornano con i nutrienti (`verificaKcal` con `FATTORI_ETICHETTA`).
+- **Diario giornaliero**: ogni voce ha data (`YYYY-MM-DD`), pasto (colazione, pranzo, cena, spuntino), alimento e grammi (solo grammi, niente porzioni). La voce salva una copia di nome, marca e valori dell'alimento, così modificare un alimento non altera lo storico.
 - **Totali**: kcal e macronutrienti per pasto e per giorno, calcolati in `src/lib/`.
 - **Obiettivo giornaliero di kcal** impostabile dall'utente, con barra di avanzamento.
 - **Storico**: consultazione dei giorni precedenti.
+- **Backup**: esportazione di tutti i dati (alimenti personali, diario, impostazioni) in un file e importazione dello stesso file, per cambio dispositivo o cancellazione dei dati del browser.
+
+Il modello dati è in `src/lib/tipi.ts`.
 
 ## Convenzioni
 
