@@ -23,6 +23,7 @@ PWA per il tracciamento alimentare: tiene traccia degli alimenti mangiati durant
 | `npm run test:watch` | Test in modalità watch |
 | `npm run lint` | ESLint su tutto il progetto |
 | `npm run typecheck` | Solo typecheck |
+| `npm run dati:crea` | Riscarica dalle tabelle CREA gli alimenti di base in `src/data/alimenti-crea.json` (Node ≥ 22.18) |
 
 Prima di ogni commit devono passare `npm run lint`, `npm test` e `npm run build`.
 
@@ -35,6 +36,8 @@ src/
   lib/            # logica di calcolo: funzioni pure + test *.test.ts
   db/             # accesso a IndexedDB (schema, migrazioni, lettura/scrittura)
   data/           # tabella statica degli alimenti di base (sola lettura, inclusa nel bundle)
+scripts/          # script Node (es. importazione dati CREA), con test *.test.ts
+docs/             # documentazione (es. verifica dei dati CREA)
 public/           # asset statici (icone)
 ```
 
@@ -43,7 +46,7 @@ public/           # asset statici (icone)
 Un solo utente per dispositivo, niente account.
 
 - **Alimenti di base**: tabella statica di alimenti comuni e uguali per tutti in `src/data/`, inclusa nell'app e non modificabile dall'utente. Fonte: tabelle di composizione **CREA** (alimentinutrizione.it), che si possono riprodurre solo **citando la fonte**: l'app deve mostrare *"Fonte: CREA Centro di ricerca Alimenti e Nutrizione – www.alimentinutrizione.it"*. Categorie CREA incluse: Frutta, Verdure e ortaggi, Legumi, Frutta secca a guscio e semi oleaginosi, Cereali e derivati, Carni fresche, Prodotti della pesca, Uova, Latte e yogurt, Oli e grassi (crudi e cotti). I prodotti che variano per marca (dolci, formaggi, salumi…) li inserisce l'utente.
-- **Veridicità dei dati**: ogni alimento di base deve superare il controllo di coerenza delle kcal (`verificaKcal` con `FATTORI_CREA`, metodo di Southgate); discrepanze con i dati USDA vanno segnalate, non corrette a mano.
+- **Veridicità dei dati**: ogni alimento di base deve superare il controllo di coerenza delle kcal (`verificaKcal` con `FATTORI_CREA`, metodo di Southgate); discrepanze con i dati USDA vanno segnalate, non corrette a mano. Il file JSON si rigenera solo con `npm run dati:crea`, mai a mano; l'ultima verifica è in `docs/verifica-dati-crea.md`.
 - **Alimenti personali**: creati dall'utente e salvati in IndexedDB, con **nome** e **marca** (facoltativa). Nome + marca identificano l'alimento: due yogurt di marche diverse sono due alimenti distinti.
 - **Valori nutrizionali per 100 g**: kcal, carboidrati, proteine e grassi obbligatori; fibre facoltative (assenti ≠ 0). All'inserimento di un alimento personale l'app avvisa se le kcal non tornano con i nutrienti (`verificaKcal` con `FATTORI_ETICHETTA`).
 - **Diario giornaliero**: ogni voce ha data (`YYYY-MM-DD`), pasto (colazione, pranzo, cena, spuntino), alimento e grammi (solo grammi, niente porzioni). La voce salva una copia di nome, marca e valori dell'alimento, così modificare un alimento non altera lo storico.
