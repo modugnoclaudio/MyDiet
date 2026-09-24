@@ -34,8 +34,21 @@ src/
   components/     # componenti UI Preact
   lib/            # logica di calcolo: funzioni pure + test *.test.ts
   db/             # accesso a IndexedDB (schema, migrazioni, lettura/scrittura)
+  data/           # tabella statica degli alimenti di base (sola lettura, inclusa nel bundle)
 public/           # asset statici (icone)
 ```
+
+## Funzionalità previste
+
+Un solo utente per dispositivo, niente account.
+
+- **Alimenti di base**: tabella statica di alimenti comuni e uguali per tutti (frutta, verdura…) in `src/data/`, inclusa nell'app e non modificabile dall'utente.
+- **Alimenti personali**: creati dall'utente e salvati in IndexedDB, con **nome** e **marca** (facoltativa). Nome + marca identificano l'alimento: due yogurt di marche diverse sono due alimenti distinti.
+- **Valori nutrizionali per 100 g**: kcal, carboidrati, proteine e grassi obbligatori; fibre facoltative (assenti ≠ 0).
+- **Diario giornaliero**: ogni voce ha data (`YYYY-MM-DD`), pasto (colazione, pranzo, cena, spuntino), alimento e grammi. La voce salva una copia di nome, marca e valori dell'alimento, così modificare un alimento non altera lo storico.
+- **Totali**: kcal e macronutrienti per pasto e per giorno, calcolati in `src/lib/`.
+- **Obiettivo giornaliero di kcal** impostabile dall'utente, con barra di avanzamento.
+- **Storico**: consultazione dei giorni precedenti.
 
 ## Convenzioni
 
