@@ -31,7 +31,7 @@ export function App() {
           />
         )}
         {vista === 'alimenti' && <AlimentiPersonali />}
-        {vista === 'impostazioni' && <Impostazioni />}
+        {vista === 'impostazioni' && <Impostazioni oggi={oggi} />}
       </main>
       <BarraNavigazione vista={vista} onCambia={cambiaVista} />
     </div>

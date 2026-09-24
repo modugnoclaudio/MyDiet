@@ -53,7 +53,7 @@ Un solo utente per dispositivo, niente account.
 - **Totali**: kcal e macronutrienti per pasto e per giorno, calcolati in `src/lib/`.
 - **Obiettivo giornaliero di kcal** impostabile dall'utente, con barra di avanzamento.
 - **Storico**: consultazione dei giorni precedenti.
-- **Backup**: esportazione di tutti i dati (alimenti personali, diario, impostazioni) in un file e importazione dello stesso file, per cambio dispositivo o cancellazione dei dati del browser.
+- **Backup** (Impostazioni): esportazione di tutti i dati (alimenti personali, diario, impostazioni) in un file JSON `mydiet-backup-YYYY-MM-DD.json` (scaricato o condiviso) e importazione dello stesso file, che **sostituisce** tutti i dati in un'unica transazione. Il file è letto e validato per intero da `leggiBackup` (`src/lib/backup.ts`) prima di toccare il database; se cambia la struttura dei dati, incrementare `FORMATO_BACKUP` e gestire i formati precedenti. Promemoria se l'ultimo backup ha più di 30 giorni.
 
 Il modello dati è in `src/lib/tipi.ts`.
 

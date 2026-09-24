@@ -12,3 +12,12 @@ export function spostaGiorni(dataIso: string, giorni: number): string {
   // A mezzogiorno per non risentire dei cambi d'ora che avvengono a mezzanotte.
   return dataISO(new Date(anno, mese - 1, giorno + giorni, 12));
 }
+
+/** Giorni di calendario da `da` ad `a` (date `YYYY-MM-DD`); negativo se `a` precede `da`. */
+export function giorniTra(da: string, a: string): number {
+  const utc = (dataIso: string) => {
+    const [anno, mese, giorno] = dataIso.split('-').map(Number) as [number, number, number];
+    return Date.UTC(anno, mese - 1, giorno);
+  };
+  return Math.round((utc(a) - utc(da)) / 86_400_000);
+}

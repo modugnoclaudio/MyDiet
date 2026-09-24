@@ -3,18 +3,26 @@ import { FONTE_ALIMENTI_BASE } from '../data/alimentiBase';
 import { leggiNumero } from '../lib/formato';
 import { validaObiettivoKcal } from '../lib/validazione';
 import { leggiImpostazioni, salvaImpostazioni } from '../db/impostazioni';
+import { Backup } from './Backup';
 import { Errori } from './Errori';
 
-/** Obiettivo giornaliero di kcal e informazioni sull'app. */
-export function Impostazioni() {
+interface Props {
+  oggi: string;
+}
+
+/** Obiettivo giornaliero di kcal, backup e informazioni sull'app. */
+export function Impostazioni({ oggi }: Props) {
   const [obiettivo, setObiettivo] = useState('');
   const [errori, setErrori] = useState<string[]>([]);
   const [messaggio, setMessaggio] = useState('');
 
+  async function caricaObiettivo() {
+    const impostazioni = await leggiImpostazioni();
+    setObiettivo(impostazioni.obiettivoKcal === null ? '' : String(impostazioni.obiettivoKcal));
+  }
+
   useEffect(() => {
-    void leggiImpostazioni().then((impostazioni) =>
-      setObiettivo(impostazioni.obiettivoKcal === null ? '' : String(impostazioni.obiettivoKcal)),
-    );
+    void caricaObiettivo();
   }, []);
 
   async function salva(evento: Event) {
@@ -60,16 +68,19 @@ export function Impostazioni() {
         </div>
       </form>
 
+      <Backup
+        oggi={oggi}
+        onImportato={() => {
+          setErrori([]);
+          setMessaggio('');
+          void caricaObiettivo();
+        }}
+      />
+
       <section class="informazioni">
         <h2>Informazioni</h2>
         <p>I tuoi dati restano solo su questo dispositivo, nel browser: non vengono inviati a nessun server.</p>
-        <p class="fonte">
-          Valori nutrizionali degli alimenti di base. {FONTE_ALIMENTI_BASE} (
-          <a href="https://www.alimentinutrizione.it" target="_blank" rel="noopener noreferrer">
-            alimentinutrizione.it
-          </a>
-          )
-        </p>
+        <p class="fonte">Valori nutrizionali degli alimenti di base. {FONTE_ALIMENTI_BASE}</p>
       </section>
     </div>
   );
