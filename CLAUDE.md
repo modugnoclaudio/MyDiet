@@ -57,6 +57,8 @@ Un solo utente per dispositivo, niente account.
 
 Il modello dati è in `src/lib/tipi.ts`.
 
+Interfaccia (`src/components/App.tsx`): quattro sezioni nella barra in basso — **Diario** (giorno con riepilogo, barra dell'obiettivo e pasti; navigazione tra i giorni), **Storico** (giorni con voci), **Alimenti** (alimenti personali) e **Impostazioni** (obiettivo, informazioni e citazione CREA). Le finestre di inserimento usano `Dialogo`; numeri scritti dall'utente con virgola o punto si leggono con `leggiNumero` / `leggiCampiValori` e si mostrano con `formattaNumero` (formato italiano).
+
 ## Convenzioni
 
 - **Logica di calcolo in `src/lib/`** come **funzioni pure** (niente DOM, niente IndexedDB, niente stato globale, niente `Date.now()` implicito: le date si passano come parametro). Ogni funzione in `src/lib/` è **sempre coperta da test** in un file `*.test.ts` accanto (es. `arrotonda.ts` → `arrotonda.test.ts`). Nessuna nuova funzione di calcolo senza test.
