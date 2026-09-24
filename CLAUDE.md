@@ -59,6 +59,15 @@ Il modello dati è in `src/lib/tipi.ts`.
 
 Interfaccia (`src/components/App.tsx`): quattro sezioni nella barra in basso — **Diario** (giorno con riepilogo, barra dell'obiettivo e pasti; navigazione tra i giorni), **Storico** (giorni con voci), **Alimenti** (alimenti personali) e **Impostazioni** (obiettivo, informazioni e citazione CREA). Le finestre di inserimento usano `Dialogo`; numeri scritti dall'utente con virgola o punto si leggono con `leggiNumero` / `leggiCampiValori` e si mostrano con `formattaNumero` (formato italiano).
 
+## Sicurezza
+
+Dettagli in `docs/sicurezza.md`. Regole da rispettare:
+
+- **Nessuna richiesta verso altri siti**: la Content Security Policy (`scripts/csp.ts`) permette solo `'self'`. Se una funzione richiede un servizio esterno (es. Open Food Facts), aggiungere il dominio **solo** alla direttiva necessaria (es. `connect-src`), mai `*`, `'unsafe-inline'` o `'unsafe-eval'`, e aggiornare `scripts/csp.test.ts`.
+- Niente script o stili inline in `index.html`; gli stili dinamici si impostano da JSX (`style={{ ... }}`), non con stringhe.
+- Mai `dangerouslySetInnerHTML` né HTML costruito da testo dell'utente.
+- Nel workflow le azioni sono bloccate a uno SHA con la versione in commento; i permessi restano minimi (`contents: read`, `pages`/`id-token` solo nel job di deploy).
+
 ## Convenzioni
 
 - **Logica di calcolo in `src/lib/`** come **funzioni pure** (niente DOM, niente IndexedDB, niente stato globale, niente `Date.now()` implicito: le date si passano come parametro). Ogni funzione in `src/lib/` è **sempre coperta da test** in un file `*.test.ts` accanto (es. `arrotonda.ts` → `arrotonda.test.ts`). Nessuna nuova funzione di calcolo senza test.
