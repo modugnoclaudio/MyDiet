@@ -17,6 +17,13 @@ export interface ValoriNutrizionali {
 export const PASTI = ['colazione', 'pranzo', 'cena', 'spuntino'] as const;
 export type Pasto = (typeof PASTI)[number];
 
+export const ETICHETTE_PASTI: Readonly<Record<Pasto, string>> = {
+  colazione: 'Colazione',
+  pranzo: 'Pranzo',
+  cena: 'Cena',
+  spuntino: 'Spuntino',
+};
+
 /** Alimento della tabella statica di base (fonte CREA), non modificabile. */
 export interface AlimentoBase {
   id: string;
