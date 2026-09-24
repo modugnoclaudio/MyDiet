@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { totaleVoci, totaliPerPasto, valoriVoce, vociDelGiorno } from './diario';
-import type { Pasto, VoceDiario } from './tipi';
+import { creaVoce, totaleVoci, totaliPerPasto, valoriVoce, vociDelGiorno } from './diario';
+import type { AlimentoBase, AlimentoPersonale, Pasto, VoceDiario } from './tipi';
 
 function voce(id: string, data: string, pasto: Pasto, grammi: number, fibre?: number): VoceDiario {
   return {
@@ -63,5 +63,51 @@ describe('totaliPerPasto', () => {
     expect(totali.cena.kcal).toBe(0);
     expect(totali.spuntino.kcal).toBe(0);
     expect(Object.keys(totali)).toEqual(['colazione', 'pranzo', 'cena', 'spuntino']);
+  });
+});
+
+describe('creaVoce', () => {
+  const yogurt: AlimentoPersonale = {
+    id: 'p1',
+    origine: 'personale',
+    nome: 'Yogurt greco',
+    marca: 'Marca A',
+    valori: { kcal: 97, carboidrati: 4, proteine: 9, grassi: 5 },
+  };
+
+  it('copia nome, marca e valori dell’alimento', () => {
+    expect(creaVoce(yogurt, '2026-09-24', 'colazione', 150)).toEqual({
+      data: '2026-09-24',
+      pasto: 'colazione',
+      grammi: 150,
+      alimento: {
+        id: 'p1',
+        nome: 'Yogurt greco',
+        marca: 'Marca A',
+        valori: { kcal: 97, carboidrati: 4, proteine: 9, grassi: 5 },
+      },
+    });
+  });
+
+  it('non cambia se l’alimento viene modificato dopo', () => {
+    const alimento = structuredClone(yogurt);
+    const voce = creaVoce(alimento, '2026-09-24', 'colazione', 150);
+    alimento.valori.kcal = 500;
+    alimento.nome = 'Altro';
+    expect(voce.alimento.valori.kcal).toBe(97);
+    expect(voce.alimento.nome).toBe('Yogurt greco');
+  });
+
+  it('per gli alimenti di base non ha marca', () => {
+    const mela: AlimentoBase = {
+      id: 'crea-007120',
+      origine: 'base',
+      nome: 'Mele, fresche, con buccia',
+      categoria: 'Frutta',
+      valori: { kcal: 44, carboidrati: 10, proteine: 0.2, grassi: 0, fibre: 2 },
+    };
+    const voce = creaVoce(mela, '2026-09-24', 'spuntino', 180);
+    expect('marca' in voce.alimento).toBe(false);
+    expect(voce.alimento.valori.fibre).toBe(2);
   });
 });

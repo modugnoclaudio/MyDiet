@@ -38,3 +38,18 @@ export function validaGrammi(grammi: number): string[] {
   if (grammi <= 0) return ['La quantità deve essere maggiore di 0 g.'];
   return [];
 }
+
+/** Controlla nome e valori di un alimento personale prima del salvataggio. */
+export function validaAlimentoPersonale(nome: string, valori: ValoriNutrizionali): string[] {
+  const errori: string[] = [];
+  if (nome.trim() === '') errori.push('Il nome è obbligatorio.');
+  return [...errori, ...validaValoriPer100g(valori)];
+}
+
+/** Controlla l'obiettivo giornaliero di kcal. */
+export function validaObiettivoKcal(kcal: number): string[] {
+  if (!Number.isFinite(kcal)) return ["L'obiettivo deve essere un numero."];
+  if (kcal <= 0) return ["L'obiettivo deve essere maggiore di 0 kcal."];
+  if (kcal > 10000) return ["L'obiettivo non può superare 10000 kcal."];
+  return [];
+}
