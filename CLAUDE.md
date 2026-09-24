@@ -61,7 +61,7 @@ Il modello dati è in `src/lib/tipi.ts`.
 
 - **Logica di calcolo in `src/lib/`** come **funzioni pure** (niente DOM, niente IndexedDB, niente stato globale, niente `Date.now()` implicito: le date si passano come parametro). Ogni funzione in `src/lib/` è **sempre coperta da test** in un file `*.test.ts` accanto (es. `arrotonda.ts` → `arrotonda.test.ts`). Nessuna nuova funzione di calcolo senza test.
 - **Componenti UI in `src/components/`**, uno per file, con nome in PascalCase ed export nominale. I componenti non contengono logica di calcolo: la importano da `src/lib/`.
-- **Persistenza** solo tramite i moduli in `src/db/`; i componenti non usano direttamente le API di IndexedDB. Ogni modifica allo schema incrementa `DB_VERSION` e aggiunge una migrazione in `upgrade`.
+- **Persistenza** solo tramite i moduli in `src/db/` (`alimenti.ts`, `diario.ts`, `impostazioni.ts`); i componenti non usano direttamente le API di IndexedDB. I moduli validano i dati con le funzioni di `src/lib/validazione.ts` e lanciano `DatiNonValidiError` / `AlimentoDuplicatoError` (`src/db/errori.ts`) con messaggi in italiano da mostrare all'utente. Ogni modifica allo schema incrementa `DB_VERSION` e aggiunge una migrazione in `upgrade` (`if (oldVersion < N)`), con un test di migrazione. I test di `src/db/` usano `fake-indexeddb` tramite `databaseVuoto()` in `src/db/test-utils.ts`.
 - **Testi dell'interfaccia in italiano** (etichette, messaggi, errori mostrati all'utente, manifest della PWA).
 - In Preact usare `class` (non `className`) negli attributi JSX.
 - Percorsi relativi al `base` di Vite: in produzione l'app è servita da `/MyDiet/` (vedi `vite.config.ts`, variabile `GITHUB_PAGES`), quindi niente URL assoluti hardcoded che iniziano con `/`.

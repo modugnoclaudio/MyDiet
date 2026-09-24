@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { validaGrammi, validaValoriPer100g } from './validazione';
+import { validaAlimentoPersonale, validaGrammi, validaObiettivoKcal, validaValoriPer100g } from './validazione';
 
 describe('validaValoriPer100g', () => {
   it('accetta valori validi, con o senza fibre', () => {
@@ -47,5 +47,37 @@ describe('validaValoriPer100g – messaggi', () => {
       'I grassi non possono essere negativi.',
       'Le fibre non possono essere negative.',
     ]);
+  });
+});
+
+describe('validaAlimentoPersonale', () => {
+  const valori = { kcal: 100, carboidrati: 10, proteine: 5, grassi: 4 };
+
+  it('accetta un alimento con nome e valori validi', () => {
+    expect(validaAlimentoPersonale('Yogurt greco', valori)).toEqual([]);
+  });
+
+  it('richiede il nome', () => {
+    expect(validaAlimentoPersonale('   ', valori)).toEqual(['Il nome è obbligatorio.']);
+  });
+
+  it('riporta anche gli errori dei valori', () => {
+    expect(validaAlimentoPersonale('', { ...valori, kcal: -1 })).toEqual([
+      'Il nome è obbligatorio.',
+      'Le calorie non possono essere negative.',
+    ]);
+  });
+});
+
+describe('validaObiettivoKcal', () => {
+  it('accetta obiettivi ragionevoli', () => {
+    expect(validaObiettivoKcal(2000)).toEqual([]);
+  });
+
+  it('rifiuta zero, negativi, valori enormi e non numeri', () => {
+    expect(validaObiettivoKcal(0)).toEqual(["L'obiettivo deve essere maggiore di 0 kcal."]);
+    expect(validaObiettivoKcal(-5)).toEqual(["L'obiettivo deve essere maggiore di 0 kcal."]);
+    expect(validaObiettivoKcal(20000)).toEqual(["L'obiettivo non può superare 10000 kcal."]);
+    expect(validaObiettivoKcal(Number.NaN)).toEqual(["L'obiettivo deve essere un numero."]);
   });
 });
