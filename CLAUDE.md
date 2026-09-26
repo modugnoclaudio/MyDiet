@@ -37,7 +37,7 @@ src/
   db/             # accesso a IndexedDB (schema, migrazioni, lettura/scrittura)
   data/           # tabella statica degli alimenti di base (sola lettura, inclusa nel bundle)
 scripts/          # script Node (es. importazione dati CREA), con test *.test.ts
-docs/             # documentazione (es. verifica dei dati CREA)
+docs/             # documentazione (es. verifica dei dati CREA) e immagini del README (docs/immagini/)
 public/           # asset statici (icone)
 ```
 
