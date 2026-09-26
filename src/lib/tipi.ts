@@ -89,3 +89,13 @@ export interface Impostazioni {
   /** data (`YYYY-MM-DD`) dell'ultima esportazione dei dati; `null` = mai */
   ultimoBackup: string | null;
 }
+
+/** Un alimento di un pasto preferito: come una voce del diario, senza data e pasto. */
+export type ElementoPasto = Pick<VoceDiario, 'grammi' | 'misura' | 'alimento'>;
+
+/** Pasto salvato dall'utente per reinserirlo con un tocco (es. "Colazione tipo"). */
+export interface PastoPreferito {
+  id: string;
+  nome: string;
+  elementi: ElementoPasto[];
+}

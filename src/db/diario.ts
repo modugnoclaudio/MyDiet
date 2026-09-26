@@ -8,6 +8,11 @@ export async function leggiVociDelGiorno(data: string): Promise<VoceDiario[]> {
   return (await getDb()).getAllFromIndex('diario', 'data', data);
 }
 
+/** Voci del diario dalla data `da` alla data `a` comprese (`YYYY-MM-DD`). */
+export async function leggiVociTraDate(da: string, a: string): Promise<VoceDiario[]> {
+  return (await getDb()).getAllFromIndex('diario', 'data', IDBKeyRange.bound(da, a));
+}
+
 /** Date che hanno almeno una voce, dalla più recente. */
 export async function giorniConVoci(): Promise<string[]> {
   const giorni: string[] = [];
@@ -27,6 +32,19 @@ export async function aggiungiVoce(dati: Omit<VoceDiario, 'id'>): Promise<VoceDi
   const voce: VoceDiario = { ...dati, id: nuovoId() };
   await (await getDb()).add('diario', voce);
   return voce;
+}
+
+/** Aggiunge più voci in un'unica operazione: o tutte o nessuna. */
+export async function aggiungiVoci(dati: readonly Omit<VoceDiario, 'id'>[]): Promise<VoceDiario[]> {
+  for (const d of dati) {
+    const errori = validaGrammi(d.grammi);
+    if (errori.length > 0) throw new DatiNonValidiError(errori);
+  }
+  const voci = dati.map((d) => ({ ...d, id: nuovoId() }));
+  const tx = (await getDb()).transaction('diario', 'readwrite');
+  await Promise.all(voci.map((voce) => tx.store.add(voce)));
+  await tx.done;
+  return voci;
 }
 
 /** Aggiorna una voce esistente (es. grammi o pasto). */

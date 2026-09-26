@@ -9,10 +9,11 @@ interface Props {
   voci: VoceDiario[];
   onAggiungi: (pasto: Pasto) => void;
   onModifica: (voce: VoceDiario) => void;
+  onSalvaPreferito: (pasto: Pasto, voci: VoceDiario[]) => void;
 }
 
 /** Voci di un pasto con il relativo totale. */
-export function SezionePasto({ pasto, voci, onAggiungi, onModifica }: Props) {
+export function SezionePasto({ pasto, voci, onAggiungi, onModifica, onSalvaPreferito }: Props) {
   return (
     <section class="pasto">
       <header class="pasto-testata">
@@ -41,6 +42,11 @@ export function SezionePasto({ pasto, voci, onAggiungi, onModifica }: Props) {
       <button type="button" class="pulsante-secondario" onClick={() => onAggiungi(pasto)}>
         + Aggiungi a {ETICHETTE_PASTI[pasto].toLowerCase()}
       </button>
+      {voci.length > 0 && (
+        <button type="button" class="collegamento salva-preferito" onClick={() => onSalvaPreferito(pasto, voci)}>
+          ☆ Salva come pasto preferito
+        </button>
+      )}
     </section>
   );
 }

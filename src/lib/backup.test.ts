@@ -41,6 +41,19 @@ const dati: DatiUtente = {
     { alimentoId: 'a1', unita: [{ nome: 'vasetto', grammi: 125 }] },
     { alimentoId: 'crea-181100', unita: [{ nome: 'uovo grande', grammi: 60 }] },
   ],
+  pastiPreferiti: [
+    {
+      id: 'pp1',
+      nome: 'Colazione tipo',
+      elementi: [
+        {
+          grammi: 150,
+          misura: { quantita: 1.2, unita: { nome: 'vasetto', grammi: 125 } },
+          alimento: { id: 'a1', nome: 'Yogurt greco', marca: 'Marca A', valori: { kcal: 97, carboidrati: 4, proteine: 9.5, grassi: 5 } },
+        },
+      ],
+    },
+  ],
 };
 
 const esportato = new Date('2026-09-24T18:30:00Z');
@@ -55,7 +68,7 @@ describe('creaBackup e leggiBackup', () => {
   it('rileggono esattamente i dati esportati', () => {
     expect(leggiBackup(creaBackup(dati, esportato))).toEqual({
       ok: true,
-      backup: { app: 'MyDiet', formato: 2, esportato: '2026-09-24T18:30:00.000Z', ...dati },
+      backup: { app: 'MyDiet', formato: 3, esportato: '2026-09-24T18:30:00.000Z', ...dati },
     });
   });
 
@@ -65,6 +78,7 @@ describe('creaBackup e leggiBackup', () => {
       diario: [],
       impostazioni: { obiettivoKcal: null, ultimoBackup: null },
       unita: [],
+      pastiPreferiti: [],
     };
     const esito = leggiBackup(creaBackup(vuoto, esportato));
     expect(esito.ok && esito.backup.alimenti).toEqual([]);
@@ -92,12 +106,27 @@ describe('backup nel formato 1 (prima delle unità)', () => {
     const vecchio = modifica((b) => {
       b.formato = 1;
       delete b.unita;
+      delete b.pastiPreferiti;
       for (const voce of b.diario as Record<string, unknown>[]) delete voce.misura;
     });
     const esito = leggiBackup(vecchio);
     expect(esito.ok && esito.backup.unita).toEqual([]);
-    expect(esito.ok && esito.backup.formato).toBe(2);
+    expect(esito.ok && esito.backup.formato).toBe(3);
+    expect(esito.ok && esito.backup.pastiPreferiti).toEqual([]);
     expect(esito.ok && esito.backup.diario[0]).not.toHaveProperty('misura');
+  });
+});
+
+describe('backup nel formato 2 (prima dei pasti preferiti)', () => {
+  it('si importa ancora, con le unità e senza pasti preferiti', () => {
+    const esito = leggiBackup(
+      modifica((b) => {
+        b.formato = 2;
+        delete b.pastiPreferiti;
+      }),
+    );
+    expect(esito.ok && esito.backup.unita).toEqual(dati.unita);
+    expect(esito.ok && esito.backup.pastiPreferiti).toEqual([]);
   });
 });
 
@@ -112,7 +141,18 @@ describe('leggiBackup rifiuta', () => {
   });
 
   it('formati di versioni diverse', () => {
-    expect(leggiBackup(modifica((b) => (b.formato = 3))).ok).toBe(false);
+    expect(leggiBackup(modifica((b) => (b.formato = 4))).ok).toBe(false);
+  });
+
+  it('pasti preferiti non validi', () => {
+    const conPasti = (pasti: unknown) => leggiBackup(modifica((b) => (b.pastiPreferiti = pasti)));
+    expect(conPasti([{ id: 'x', nome: 'Vuoto', elementi: [] }])).toEqual({
+      ok: false,
+      errori: ['Il pasto preferito n. 1 non è valido.'],
+    });
+    expect(conPasti([{ id: 'x', nome: '', elementi: dati.pastiPreferiti[0]!.elementi }]).ok).toBe(false);
+    expect(conPasti([{ id: 'x', nome: 'A', elementi: [{ grammi: 0, alimento: dati.pastiPreferiti[0]!.elementi[0]!.alimento }] }]).ok).toBe(false);
+    expect(leggiBackup(modifica((b) => delete b.pastiPreferiti))).toEqual({ ok: false, errori: ['Il backup è incompleto o danneggiato.'] });
   });
 
   it('unità non valide o ripetute', () => {

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { creaVoce } from '../lib/diario';
 import type { AlimentoPersonale } from '../lib/tipi';
 import { salvaAlimentoPersonale } from './alimenti';
-import { aggiornaVoce, aggiungiVoce, eliminaVoce, giorniConVoci, leggiVociDelGiorno } from './diario';
+import { aggiornaVoce, aggiungiVoce, aggiungiVoci, eliminaVoce, giorniConVoci, leggiVociDelGiorno, leggiVociTraDate } from './diario';
 import { DatiNonValidiError } from './errori';
 import { databaseVuoto } from './test-utils';
 
@@ -51,5 +51,22 @@ describe('diario', () => {
     await salvaAlimentoPersonale({ ...yogurt, valori: { ...yogurt.valori, kcal: 90 } });
     const [voce] = await leggiVociDelGiorno('2026-09-24');
     expect(voce?.alimento.valori.kcal).toBe(60);
+  });
+
+  it('legge le voci tra due date comprese', async () => {
+    for (const data of ['2026-09-20', '2026-09-21', '2026-09-23', '2026-09-24']) {
+      await aggiungiVoce(creaVoce(mela, data, 'pranzo', 100));
+    }
+    expect((await leggiVociTraDate('2026-09-21', '2026-09-23')).map((v) => v.data).sort()).toEqual(['2026-09-21', '2026-09-23']);
+  });
+
+  it('aggiunge più voci insieme, oppure nessuna se una non è valida', async () => {
+    const voci = await aggiungiVoci([creaVoce(mela, '2026-09-24', 'pranzo', 100), creaVoce(mela, '2026-09-24', 'cena', 50)]);
+    expect(voci).toHaveLength(2);
+    expect(await leggiVociDelGiorno('2026-09-24')).toHaveLength(2);
+    await expect(
+      aggiungiVoci([creaVoce(mela, '2026-09-25', 'pranzo', 100), creaVoce(mela, '2026-09-25', 'cena', 0)]),
+    ).rejects.toThrow(DatiNonValidiError);
+    expect(await leggiVociDelGiorno('2026-09-25')).toEqual([]);
   });
 });

@@ -655,3 +655,49 @@ legend {
   gap: 0.5rem;
   margin-top: 0.5rem;
 }
+
+/* Preferiti */
+.riga-con-azione {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.riga-con-azione .riga {
+  flex: 1;
+}
+
+.riga.statica {
+  cursor: default;
+}
+
+.riga.statica:hover {
+  background: none;
+}
+
+.totale-pasto {
+  text-align: right;
+  font-weight: 600;
+  margin: 0.25rem 0 0;
+}
+
+.salva-preferito {
+  display: block;
+  margin: 0.75rem auto 0;
+  font-size: 0.9rem;
+}
+
+.pasti-preferiti {
+  margin-top: 2rem;
+}
+
+.pasti-preferiti h2 {
+  margin-bottom: 0.5rem;
+}
+
+.pasti-preferiti .elenco {
+  background: var(--superficie);
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio);
+  padding: 0 0.75rem;
+}
