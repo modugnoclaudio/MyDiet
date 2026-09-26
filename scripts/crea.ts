@@ -30,6 +30,8 @@ export interface SchedaCrea {
   carboidrati: number;
   /** `undefined` se il dato non è disponibile */
   fibre: number | undefined;
+  /** porzione standard in grammi indicata dal CREA; `undefined` se assente */
+  porzione: number | undefined;
 }
 
 function testo(html: string): string {
@@ -101,7 +103,16 @@ export function leggiScheda(html: string): SchedaCrea {
     grassi: obbligatorio(html, 'Lipidi (g)', codice),
     carboidrati: obbligatorio(html, 'Carboidrati disponibili (g)', codice),
     fibre: nutriente(html, 'Fibra totale (g)'),
+    porzione: grammiPorzione(campo(html, 'Porzione')),
   };
+}
+
+/** Grammi della porzione standard, es. "80 g" → 80; `undefined` se assente o non in grammi. */
+export function grammiPorzione(testoPorzione: string | undefined): number | undefined {
+  const m = testoPorzione ? /^(\d+(?:[.,]\d+)?)\s*g$/.exec(testoPorzione.trim()) : null;
+  if (!m) return undefined;
+  const grammi = Number(m[1]!.replace(',', '.'));
+  return grammi > 0 ? grammi : undefined;
 }
 
 /**

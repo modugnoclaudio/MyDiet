@@ -1,11 +1,13 @@
-import { useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import { FATTORI_ETICHETTA, verificaKcal } from '../lib/coerenza';
 import { formattaNumero } from '../lib/formato';
 import { campiDaValori, leggiCampiValori, type CampiValori } from '../lib/modulo';
-import type { AlimentoPersonale } from '../lib/tipi';
+import type { AlimentoPersonale, Unita } from '../lib/tipi';
 import { salvaAlimentoPersonale } from '../db/alimenti';
 import { AlimentoDuplicatoError, DatiNonValidiError } from '../db/errori';
+import { leggiUnitaPersonali, salvaUnitaPersonali } from '../db/unita';
 import { Errori } from './Errori';
+import { GestioneUnita } from './GestioneUnita';
 
 interface Props {
   /** alimento da modificare, oppure solo un nome per precompilare un nuovo alimento */
@@ -32,6 +34,11 @@ export function ModuloAlimento({ iniziale, onSalvato, onAnnulla }: Props) {
   const [campi, setCampi] = useState<CampiValori>(esistente ? campiDaValori(esistente.valori) : CAMPI_VUOTI);
   const [errori, setErrori] = useState<string[]>([]);
   const [salvataggio, setSalvataggio] = useState(false);
+  const [unita, setUnita] = useState<Unita[]>([]);
+
+  useEffect(() => {
+    if (esistente) void leggiUnitaPersonali(esistente.id).then(setUnita);
+  }, [esistente?.id]);
 
   const lettura = leggiCampiValori(campi);
   const coerenza = lettura.valori ? verificaKcal(lettura.valori, FATTORI_ETICHETTA) : undefined;
@@ -50,6 +57,7 @@ export function ModuloAlimento({ iniziale, onSalvato, onAnnulla }: Props) {
         marca,
         valori: lettura.valori,
       });
+      await salvaUnitaPersonali(alimento.id, unita);
       onSalvato(alimento);
     } catch (errore) {
       if (errore instanceof DatiNonValidiError) setErrori(errore.errori);
@@ -86,6 +94,14 @@ export function ModuloAlimento({ iniziale, onSalvato, onAnnulla }: Props) {
             </label>
           ))}
         </div>
+      </fieldset>
+      <fieldset>
+        <legend>Unità (facoltative)</legend>
+        <GestioneUnita
+          unita={unita}
+          onCambia={setUnita}
+          descrizione="Per inserire questo alimento a pezzi invece che in grammi, per esempio vasetto = 125 g o fetta = 30 g."
+        />
       </fieldset>
       {coerenza && !coerenza.coerente && (
         <p class="avviso" role="status">

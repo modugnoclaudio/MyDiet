@@ -2,6 +2,7 @@ import { nomeCompleto } from '../lib/alimenti';
 import { totaleVoci, valoriVoce } from '../lib/diario';
 import { formattaNumero } from '../lib/formato';
 import { ETICHETTE_PASTI, type Pasto, type VoceDiario } from '../lib/tipi';
+import { descriviMisura } from '../lib/unita';
 
 interface Props {
   pasto: Pasto;
@@ -26,7 +27,11 @@ export function SezionePasto({ pasto, voci, onAggiungi, onModifica }: Props) {
             <li key={voce.id}>
               <button type="button" class="riga" onClick={() => onModifica(voce)}>
                 <span class="riga-nome">{nomeCompleto(voce.alimento)}</span>
-                <span class="riga-dettaglio">{formattaNumero(voce.grammi, 1)} g</span>
+                <span class="riga-dettaglio">
+                  {voce.misura
+                    ? `${descriviMisura(voce.misura.quantita, voce.misura.unita, formattaNumero)} · ${formattaNumero(voce.grammi, 1)} g`
+                    : `${formattaNumero(voce.grammi, 1)} g`}
+                </span>
                 <span class="riga-kcal">{formattaNumero(valoriVoce(voce).kcal)} kcal</span>
               </button>
             </li>

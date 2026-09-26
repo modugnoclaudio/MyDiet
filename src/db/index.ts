@@ -1,8 +1,8 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
-import type { AlimentoPersonale, Impostazioni, VoceDiario } from '../lib/tipi';
+import type { AlimentoPersonale, Impostazioni, UnitaAlimento, VoceDiario } from '../lib/tipi';
 
 export const DB_NAME = 'mydiet';
-export const DB_VERSION = 2;
+export const DB_VERSION = 3;
 
 /** Alimento personale come salvato: con la chiave nome + marca per l'unicità. */
 export type AlimentoPersonaleSalvato = AlimentoPersonale & { chiave: string };
@@ -22,7 +22,13 @@ export interface MyDietDB extends DBSchema {
     key: string;
     value: Impostazioni;
   };
+  /** unità definite dall'utente, per alimento (di base o personale) */
+  unita: {
+    key: string;
+    value: UnitaAlimento;
+  };
 }
+
 
 let dbPromise: Promise<IDBPDatabase<MyDietDB>> | undefined;
 
@@ -34,6 +40,9 @@ export function getDb(): Promise<IDBPDatabase<MyDietDB>> {
         db.createObjectStore('alimenti', { keyPath: 'id' }).createIndex('chiave', 'chiave', { unique: true });
         db.createObjectStore('diario', { keyPath: 'id' }).createIndex('data', 'data');
         db.createObjectStore('impostazioni');
+      }
+      if (oldVersion < 3) {
+        db.createObjectStore('unita', { keyPath: 'alimentoId' });
       }
     },
     blocking() {

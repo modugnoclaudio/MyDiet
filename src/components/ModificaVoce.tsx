@@ -1,11 +1,13 @@
-import { useState } from 'preact/hooks';
+import { useEffect, useMemo, useState } from 'preact/hooks';
+import { ALIMENTI_BASE } from '../data/alimentiBase';
 import { nomeCompleto } from '../lib/alimenti';
 import { valoriVoce } from '../lib/diario';
-import { formattaNumero, leggiNumero } from '../lib/formato';
-import type { VoceDiario } from '../lib/tipi';
-import { validaGrammi } from '../lib/validazione';
+import { formattaNumero } from '../lib/formato';
+import type { Unita, VoceDiario } from '../lib/tipi';
+import { descriviMisura, leggiQuantita, unitaDisponibili, unitaPerModifica } from '../lib/unita';
 import { aggiornaVoce, eliminaVoce } from '../db/diario';
-import { CampoGrammiPasto } from './CampoGrammiPasto';
+import { leggiUnitaPersonali } from '../db/unita';
+import { CampoQuantita } from './CampoQuantita';
 import { Dialogo } from './Dialogo';
 import { Errori } from './Errori';
 import { Nutrienti } from './Nutrienti';
@@ -18,22 +20,39 @@ interface Props {
 
 /** Modifica di quantità e pasto di una voce del diario, o sua eliminazione. */
 export function ModificaVoce({ voce, onChiudi, onModificata }: Props) {
-  const [grammi, setGrammi] = useState(String(voce.grammi).replace('.', ','));
+  const [quantita, setQuantita] = useState(
+    String(voce.misura ? voce.misura.quantita : voce.grammi).replace('.', ','),
+  );
+  const [unita, setUnita] = useState<Unita | null>(voce.misura?.unita ?? null);
+  const [unitaPersonali, setUnitaPersonali] = useState<Unita[]>([]);
   const [pasto, setPasto] = useState(voce.pasto);
   const [errori, setErrori] = useState<string[]>([]);
 
-  const quantita = leggiNumero(grammi);
-  const valida = quantita !== undefined && validaGrammi(quantita).length === 0;
-  const anteprima = valida ? valoriVoce({ ...voce, grammi: quantita }) : undefined;
+  useEffect(() => {
+    void leggiUnitaPersonali(voce.alimento.id).then(setUnitaPersonali);
+  }, [voce.alimento.id]);
+
+  const opzioniUnita = useMemo(() => {
+    const base = ALIMENTI_BASE.find((a) => a.id === voce.alimento.id);
+    const disponibili = base ? unitaDisponibili(base, unitaPersonali) : unitaPersonali;
+    return unitaPerModifica(disponibili, voce.misura?.unita);
+  }, [voce, unitaPersonali]);
+
+
+  const letta = leggiQuantita(quantita, unita);
+  const anteprima = letta.errori ? undefined : valoriVoce({ ...voce, grammi: letta.grammi });
 
   async function salva(evento: Event) {
     evento.preventDefault();
-    if (quantita === undefined || !valida) {
-      setErrori(quantita === undefined ? ['Inserisci la quantità in grammi.'] : validaGrammi(quantita));
+    if (letta.errori) {
+      setErrori(letta.errori);
       return;
     }
+    const aggiornata: VoceDiario = { ...voce, grammi: letta.grammi, pasto };
+    if (letta.misura) aggiornata.misura = letta.misura;
+    else delete aggiornata.misura;
     try {
-      await aggiornaVoce({ ...voce, grammi: quantita, pasto });
+      await aggiornaVoce(aggiornata);
       onModificata();
     } catch {
       setErrori(['Non è stato possibile salvare. Riprova.']);
@@ -54,11 +73,26 @@ export function ModificaVoce({ voce, onChiudi, onModificata }: Props) {
           <br />
           <span class="nota">{formattaNumero(voce.alimento.valori.kcal)} kcal per 100 g</span>
         </p>
-        <CampoGrammiPasto grammi={grammi} pasto={pasto} onGrammi={setGrammi} onPasto={setPasto} />
-        {anteprima && (
+        <CampoQuantita
+          quantita={quantita}
+          unita={unita}
+          opzioni={opzioniUnita}
+          pasto={pasto}
+          onQuantita={setQuantita}
+          onUnita={setUnita}
+          onPasto={setPasto}
+        />
+        {anteprima && !letta.errori && (
           <div class="anteprima">
             <p>
               <strong>{formattaNumero(anteprima.kcal)} kcal</strong>
+              {letta.misura && (
+                <span class="nota">
+                  {' '}
+                  · {descriviMisura(letta.misura.quantita, letta.misura.unita, formattaNumero)} ={' '}
+                  {formattaNumero(letta.grammi, 1)} g
+                </span>
+              )}
             </p>
             <Nutrienti valori={anteprima} />
           </div>

@@ -17,4 +17,5 @@ export const ALIMENTI_BASE: readonly AlimentoBase[] = dati.alimenti.map((voce) =
     grassi: voce.grassi,
     ...(voce.fibre === undefined ? {} : { fibre: voce.fibre }),
   },
+  ...('porzione' in voce && voce.porzione !== undefined ? { porzione: voce.porzione } : {}),
 }));
