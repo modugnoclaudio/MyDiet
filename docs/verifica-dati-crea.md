@@ -2,6 +2,10 @@
 
 Controllo di veridicità degli alimenti di base (`src/data/alimenti-crea.json`), eseguito il 2026-09-24 sui dati estratti con `npm run dati:crea`.
 
+## Porzioni standard
+
+Dal 2026-09-26 l'estrazione include anche la **porzione standard** di ogni scheda (campo "Porzione"), presente per 615 alimenti su 616 (manca per `009110` Margarina). La nuova estrazione ha confermato identici tutti i valori nutrizionali precedenti. Per le uova di gallina la porzione di albume (35 g) più quella di tuorlo (15 g) è pari a quella dell'uovo intero (50 g): per questo nell'app la porzione delle uova di gallina è mostrata come "uovo". Controllo ripetuto dai test.
+
 ## 1. Coerenza interna (tutti i 616 alimenti)
 
 Per ogni alimento le kcal dichiarate dal CREA sono state ricalcolate dai nutrienti con i fattori del metodo di Southgate usato dal CREA (carboidrati disponibili 3,75 kcal/g, proteine 4, grassi 9, fibre 2).

@@ -1,15 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { leggiElenco, leggiScheda, leggiSchedaSenzaAlcol } from './crea';
+import { grammiPorzione, leggiElenco, leggiScheda, leggiSchedaSenzaAlcol } from './crea';
 
 // Estratti con la stessa struttura delle pagine di www.alimentinutrizione.it
 function riga(nome: string, unita: string, valore: string): string {
   return `<tr class="corponutriente"><td width="250">${nome}</td><td>${unita}</td><td>${valore}</td><td></td><td></td><td>0</td></tr>`;
 }
 
-function scheda(opzioni: { fibre?: string; alcool?: string; nomeInglese?: string } = {}): string {
+function scheda(opzioni: { fibre?: string; alcool?: string; nomeInglese?: string; porzione?: string } = {}): string {
   return [
     '<h1 class="article-title" itemprop="name">\n Pomodori, San Marzano, freschi <meta itemprop="url" content="x" />\n</h1>',
     '<tr><td>Categoria</td><td>Verdure e ortaggi</td></tr><tr><td>Codice Alimento</td><td>006620</td></tr>',
+    `<tr><td>Porzione</td><td>${opzioni.porzione ?? '200 g'}</td></tr>`,
     `<tr><td>English Name</td><td>${opzioni.nomeInglese ?? 'Tomatoes'}</td></tr>`,
     riga('Energia (kcal)', 'kcal', '19&nbsp;'),
     riga('Proteine (g)', 'g (N x 6,25)', '1.0&nbsp;'),
@@ -43,6 +44,7 @@ describe('leggiScheda', () => {
       grassi: 0,
       carboidrati: 3,
       fibre: 1.2,
+      porzione: 200,
     });
   });
 
@@ -69,5 +71,23 @@ describe('leggiSchedaSenzaAlcol', () => {
 
   it('rifiuta alimenti con alcol', () => {
     expect(() => leggiSchedaSenzaAlcol(scheda({ alcool: '4.5' }))).toThrow('contiene 4.5 g di alcol');
+  });
+});
+
+describe('grammiPorzione', () => {
+  it('legge i grammi della porzione', () => {
+    expect(grammiPorzione('80 g')).toBe(80);
+    expect(grammiPorzione(' 12,5 g ')).toBe(12.5);
+  });
+
+  it('restituisce undefined se la porzione manca o non è in grammi', () => {
+    expect(grammiPorzione(undefined)).toBeUndefined();
+    expect(grammiPorzione('')).toBeUndefined();
+    expect(grammiPorzione('1 tazza')).toBeUndefined();
+    expect(grammiPorzione('0 g')).toBeUndefined();
+  });
+
+  it('è letta dalla scheda', () => {
+    expect(leggiScheda(scheda({ porzione: '' })).porzione).toBeUndefined();
   });
 });

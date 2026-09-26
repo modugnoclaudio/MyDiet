@@ -18,6 +18,7 @@ const dati: DatiUtente = {
       data: '2026-09-24',
       pasto: 'colazione',
       grammi: 150,
+      misura: { quantita: 1.2, unita: { nome: 'vasetto', grammi: 125 } },
       alimento: { id: 'a1', nome: 'Yogurt greco', marca: 'Marca A', valori: { kcal: 97, carboidrati: 4, proteine: 9.5, grassi: 5 } },
     },
     {
@@ -36,6 +37,10 @@ const dati: DatiUtente = {
     },
   ],
   impostazioni: { obiettivoKcal: 1800, ultimoBackup: '2026-09-01' },
+  unita: [
+    { alimentoId: 'a1', unita: [{ nome: 'vasetto', grammi: 125 }] },
+    { alimentoId: 'crea-181100', unita: [{ nome: 'uovo grande', grammi: 60 }] },
+  ],
 };
 
 const esportato = new Date('2026-09-24T18:30:00Z');
@@ -50,12 +55,17 @@ describe('creaBackup e leggiBackup', () => {
   it('rileggono esattamente i dati esportati', () => {
     expect(leggiBackup(creaBackup(dati, esportato))).toEqual({
       ok: true,
-      backup: { app: 'MyDiet', formato: 1, esportato: '2026-09-24T18:30:00.000Z', ...dati },
+      backup: { app: 'MyDiet', formato: 2, esportato: '2026-09-24T18:30:00.000Z', ...dati },
     });
   });
 
   it('funzionano anche senza dati', () => {
-    const vuoto: DatiUtente = { alimenti: [], diario: [], impostazioni: { obiettivoKcal: null, ultimoBackup: null } };
+    const vuoto: DatiUtente = {
+      alimenti: [],
+      diario: [],
+      impostazioni: { obiettivoKcal: null, ultimoBackup: null },
+      unita: [],
+    };
     const esito = leggiBackup(creaBackup(vuoto, esportato));
     expect(esito.ok && esito.backup.alimenti).toEqual([]);
   });
@@ -77,6 +87,20 @@ describe('creaBackup e leggiBackup', () => {
   });
 });
 
+describe('backup nel formato 1 (prima delle unità)', () => {
+  it('si importa ancora, senza unità', () => {
+    const vecchio = modifica((b) => {
+      b.formato = 1;
+      delete b.unita;
+      for (const voce of b.diario as Record<string, unknown>[]) delete voce.misura;
+    });
+    const esito = leggiBackup(vecchio);
+    expect(esito.ok && esito.backup.unita).toEqual([]);
+    expect(esito.ok && esito.backup.formato).toBe(2);
+    expect(esito.ok && esito.backup.diario[0]).not.toHaveProperty('misura');
+  });
+});
+
 describe('leggiBackup rifiuta', () => {
   it('file che non sono JSON', () => {
     expect(leggiBackup('ciao')).toEqual({ ok: false, errori: ['Il file non è un backup di MyDiet: non è un file JSON valido.'] });
@@ -88,7 +112,33 @@ describe('leggiBackup rifiuta', () => {
   });
 
   it('formati di versioni diverse', () => {
-    expect(leggiBackup(modifica((b) => (b.formato = 2))).ok).toBe(false);
+    expect(leggiBackup(modifica((b) => (b.formato = 3))).ok).toBe(false);
+  });
+
+  it('unità non valide o ripetute', () => {
+    const conUnita = (unita: unknown) => leggiBackup(modifica((b) => (b.unita = unita)));
+    expect(conUnita([{ alimentoId: 'a1', unita: [{ nome: '', grammi: 10 }] }])).toEqual({
+      ok: false,
+      errori: ['Le unità n. 1 non sono valide.'],
+    });
+    expect(conUnita([{ alimentoId: 'a1', unita: [] }]).ok).toBe(false);
+    expect(conUnita([{ alimentoId: 'a1', unita: [{ nome: 'x', grammi: 1 }, { nome: 'X', grammi: 2 }] }]).ok).toBe(false);
+    expect(
+      conUnita([
+        { alimentoId: 'a1', unita: [{ nome: 'x', grammi: 1 }] },
+        { alimentoId: 'a1', unita: [{ nome: 'y', grammi: 1 }] },
+      ]),
+    ).toEqual({ ok: false, errori: ['Il backup contiene dati ripetuti.'] });
+    expect(leggiBackup(modifica((b) => delete b.unita))).toEqual({ ok: false, errori: ['Il backup è incompleto o danneggiato.'] });
+  });
+
+  it('voci con una quantità in unità non coerente con i grammi', () => {
+    const esito = leggiBackup(
+      modifica((b) => {
+        ((b.diario as Record<string, unknown>[])[0]!.misura as Record<string, unknown>).quantita = 3;
+      }),
+    );
+    expect(esito).toEqual({ ok: false, errori: ['La voce del diario n. 1 non è valida.'] });
   });
 
   it('backup incompleti', () => {

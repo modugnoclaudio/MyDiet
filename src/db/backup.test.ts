@@ -6,13 +6,16 @@ import { leggiTuttiIDati, sostituisciTuttiIDati } from './backup';
 import { aggiungiVoce, giorniConVoci, leggiVociDelGiorno } from './diario';
 import { leggiImpostazioni, salvaImpostazioni } from './impostazioni';
 import { databaseVuoto } from './test-utils';
+import { leggiUnitaPersonali, salvaUnitaPersonali } from './unita';
 
 const valori = { kcal: 97, carboidrati: 4, proteine: 9.5, grassi: 5 };
 
 async function popola(): Promise<void> {
   const yogurt = await salvaAlimentoPersonale({ nome: 'Yogurt greco', marca: 'Marca A', valori });
   await aggiungiVoce(creaVoce(yogurt, '2026-09-24', 'colazione', 150));
-  await aggiungiVoce(creaVoce(yogurt, '2026-09-22', 'spuntino', 125));
+  await aggiungiVoce(creaVoce(yogurt, '2026-09-22', 'spuntino', 125, { quantita: 1, unita: { nome: 'vasetto', grammi: 125 } }));
+  await salvaUnitaPersonali(yogurt.id, [{ nome: 'vasetto', grammi: 125 }]);
+  await salvaUnitaPersonali('crea-181100', [{ nome: 'uovo grande', grammi: 60 }]);
   await salvaImpostazioni({ obiettivoKcal: 1800 });
 }
 
@@ -26,6 +29,8 @@ describe('backup nel database', () => {
     expect(dati.alimenti[0]).not.toHaveProperty('chiave');
     expect(dati.diario.map((v) => v.data)).toEqual(['2026-09-22', '2026-09-24']);
     expect(dati.impostazioni).toEqual({ obiettivoKcal: 1800, ultimoBackup: null });
+    expect(dati.unita).toHaveLength(2);
+    expect(dati.diario[0]?.misura).toEqual({ quantita: 1, unita: { nome: 'vasetto', grammi: 125 } });
   });
 
   it('esporta e reimporta su un dispositivo vuoto gli stessi dati', async () => {
@@ -40,6 +45,7 @@ describe('backup nel database', () => {
 
     expect(await leggiTuttiIDati()).toEqual(originali);
     expect(await giorniConVoci()).toEqual(['2026-09-24', '2026-09-22']);
+    expect(await leggiUnitaPersonali('crea-181100')).toEqual([{ nome: 'uovo grande', grammi: 60 }]);
   });
 
   it('dopo l’importazione il controllo dei duplicati continua a funzionare', async () => {
@@ -58,11 +64,13 @@ describe('backup nel database', () => {
       alimenti: [{ id: 'x', origine: 'personale', nome: 'Mela', valori: { kcal: 44, carboidrati: 10, proteine: 0.2, grassi: 0 } }],
       diario: [],
       impostazioni: { obiettivoKcal: null, ultimoBackup: null },
+      unita: [],
     };
     await sostituisciTuttiIDati(nuovi);
     expect((await elencaAlimentiPersonali()).map((a) => a.nome)).toEqual(['Mela']);
     expect(await leggiVociDelGiorno('2026-09-24')).toEqual([]);
     expect(await leggiImpostazioni()).toEqual({ obiettivoKcal: null, ultimoBackup: null });
+    expect(await leggiUnitaPersonali('crea-181100')).toEqual([]);
   });
 
   it('se l’importazione fallisce lascia intatti i dati precedenti', async () => {
@@ -71,7 +79,7 @@ describe('backup nel database', () => {
     const alimento = { id: 'dup', origine: 'personale' as const, nome: 'Mela', valori };
     // Due alimenti con lo stesso id: il secondo inserimento fallisce
     await expect(
-      sostituisciTuttiIDati({ alimenti: [alimento, alimento], diario: [], impostazioni: prima.impostazioni }),
+      sostituisciTuttiIDati({ alimenti: [alimento, alimento], diario: [], impostazioni: prima.impostazioni, unita: [] }),
     ).rejects.toThrow();
     expect(await leggiTuttiIDati()).toEqual(prima);
   });

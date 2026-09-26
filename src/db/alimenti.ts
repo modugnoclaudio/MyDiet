@@ -56,7 +56,12 @@ export async function salvaAlimentoPersonale(
   return alimento;
 }
 
-/** Elimina un alimento personale. Le voci del diario che lo usano restano invariate. */
+/**
+ * Elimina un alimento personale e le sue unità.
+ * Le voci del diario che lo usano restano invariate.
+ */
 export async function eliminaAlimentoPersonale(id: string): Promise<void> {
-  await (await getDb()).delete('alimenti', id);
+  const tx = (await getDb()).transaction(['alimenti', 'unita'], 'readwrite');
+  await Promise.all([tx.objectStore('alimenti').delete(id), tx.objectStore('unita').delete(id)]);
+  await tx.done;
 }

@@ -2,16 +2,18 @@ import { useEffect, useMemo, useState } from 'preact/hooks';
 import { ALIMENTI_BASE, FONTE_ALIMENTI_BASE } from '../data/alimentiBase';
 import { nomeCompleto } from '../lib/alimenti';
 import { creaVoce } from '../lib/diario';
-import { formattaNumero, leggiNumero } from '../lib/formato';
+import { formattaNumero } from '../lib/formato';
 import { cercaAlimenti } from '../lib/ricerca';
-import type { Alimento, AlimentoPersonale, Pasto } from '../lib/tipi';
-import { validaGrammi } from '../lib/validazione';
+import type { Alimento, AlimentoPersonale, Pasto, Unita } from '../lib/tipi';
+import { descriviMisura, leggiQuantita, unitaDisponibili, unitaIniziale } from '../lib/unita';
 import { valoriPerGrammi } from '../lib/valori';
 import { elencaAlimentiPersonali } from '../db/alimenti';
 import { aggiungiVoce } from '../db/diario';
-import { CampoGrammiPasto } from './CampoGrammiPasto';
+import { leggiUnitaPersonali, salvaUnitaPersonali } from '../db/unita';
+import { CampoQuantita } from './CampoQuantita';
 import { Dialogo } from './Dialogo';
 import { Errori } from './Errori';
+import { GestioneUnita } from './GestioneUnita';
 import { ModuloAlimento } from './ModuloAlimento';
 import { Nutrienti } from './Nutrienti';
 
@@ -28,7 +30,9 @@ export function AggiungiVoce({ data, pasto: pastoIniziale, onChiudi, onAggiunta 
   const [ricerca, setRicerca] = useState('');
   const [selezionato, setSelezionato] = useState<Alimento | null>(null);
   const [creazione, setCreazione] = useState(false);
-  const [grammi, setGrammi] = useState('');
+  const [quantita, setQuantita] = useState('');
+  const [unitaPersonali, setUnitaPersonali] = useState<Unita[]>([]);
+  const [unita, setUnita] = useState<Unita | null>(null);
   const [pasto, setPasto] = useState(pastoIniziale);
   const [errori, setErrori] = useState<string[]>([]);
 
@@ -43,21 +47,41 @@ export function AggiungiVoce({ data, pasto: pastoIniziale, onChiudi, onAggiunta 
 
   function scegli(alimento: Alimento) {
     setSelezionato(alimento);
-    setGrammi('');
+    setQuantita('');
     setErrori([]);
+    setUnitaPersonali([]);
+    setUnita(unitaIniziale(unitaDisponibili(alimento, []), []));
+    void leggiUnitaPersonali(alimento.id).then((personali) => {
+      setUnitaPersonali(personali);
+      setUnita(unitaIniziale(unitaDisponibili(alimento, personali), personali));
+    });
   }
+
+  const opzioniUnita = useMemo(
+    () => (selezionato ? unitaDisponibili(selezionato, unitaPersonali) : []),
+    [selezionato, unitaPersonali],
+  );
+
+  async function cambiaUnitaPersonali(nuove: Unita[]) {
+    if (!selezionato) return;
+    const salvate = await salvaUnitaPersonali(selezionato.id, nuove);
+    setUnitaPersonali(salvate);
+    const aggiunta = salvate.find((u) => !unitaPersonali.some((p) => p.nome === u.nome));
+    if (aggiunta) setUnita(aggiunta);
+    else if (unita && !unitaDisponibili(selezionato, salvate).some((u) => u.nome === unita.nome)) setUnita(null);
+  }
+
 
   async function aggiungi(evento: Event) {
     evento.preventDefault();
     if (!selezionato) return;
-    const quantita = leggiNumero(grammi);
-    const erroriGrammi = quantita === undefined ? ['Inserisci la quantità in grammi.'] : validaGrammi(quantita);
-    if (erroriGrammi.length > 0 || quantita === undefined) {
-      setErrori(erroriGrammi);
+    const letta = leggiQuantita(quantita, unita);
+    if (letta.errori) {
+      setErrori(letta.errori);
       return;
     }
     try {
-      await aggiungiVoce(creaVoce(selezionato, data, pasto, quantita));
+      await aggiungiVoce(creaVoce(selezionato, data, pasto, letta.grammi, letta.misura));
       onAggiunta();
     } catch {
       setErrori(['Non è stato possibile salvare. Riprova.']);
@@ -81,8 +105,8 @@ export function AggiungiVoce({ data, pasto: pastoIniziale, onChiudi, onAggiunta 
   }
 
   if (selezionato) {
-    const quantita = leggiNumero(grammi);
-    const anteprima = quantita !== undefined && validaGrammi(quantita).length === 0 ? valoriPerGrammi(selezionato.valori, quantita) : undefined;
+    const letta = leggiQuantita(quantita, unita);
+    const anteprima = letta.errori ? undefined : valoriPerGrammi(selezionato.valori, letta.grammi);
     return (
       <Dialogo titolo="Aggiungi al diario" onChiudi={onChiudi}>
         <form class="modulo" onSubmit={aggiungi} noValidate>
@@ -91,16 +115,40 @@ export function AggiungiVoce({ data, pasto: pastoIniziale, onChiudi, onAggiunta 
             <br />
             <span class="nota">{formattaNumero(selezionato.valori.kcal)} kcal per 100 g</span>
           </p>
-          <CampoGrammiPasto grammi={grammi} pasto={pasto} onGrammi={setGrammi} onPasto={setPasto} />
-          {anteprima && (
+          <CampoQuantita
+            quantita={quantita}
+            unita={unita}
+            opzioni={opzioniUnita}
+            pasto={pasto}
+            onQuantita={setQuantita}
+            onUnita={setUnita}
+            onPasto={setPasto}
+          />
+          {anteprima && !letta.errori && (
             <div class="anteprima">
               <p>
                 <strong>{formattaNumero(anteprima.kcal)} kcal</strong>
+                {letta.misura && (
+                  <span class="nota">
+                    {' '}
+                    · {descriviMisura(letta.misura.quantita, letta.misura.unita, formattaNumero)} ={' '}
+                    {formattaNumero(letta.grammi, 1)} g
+                  </span>
+                )}
               </p>
               <Nutrienti valori={anteprima} />
             </div>
           )}
           <Errori errori={errori} />
+          <GestioneUnita
+            unita={unitaPersonali}
+            onCambia={cambiaUnitaPersonali}
+            descrizione={
+              selezionato.origine === 'base' && selezionato.porzione !== undefined
+                ? `Nel menu Unità trovi la porzione standard CREA (${formattaNumero(selezionato.porzione, 1)} g), un valore medio di riferimento. Qui puoi aggiungere le tue unità, per esempio il peso di un pezzo che hai pesato.`
+                : 'Le tue unità per questo alimento, per esempio vasetto = 125 g.'
+            }
+          />
           <div class="azioni">
             <button type="button" class="pulsante-secondario" onClick={() => setSelezionato(null)}>
               Indietro

@@ -7,6 +7,7 @@ import {
 } from './alimenti';
 import { AlimentoDuplicatoError, DatiNonValidiError } from './errori';
 import { databaseVuoto } from './test-utils';
+import { leggiUnitaPersonali, salvaUnitaPersonali } from './unita';
 
 const valori = { kcal: 97, carboidrati: 4, proteine: 9, grassi: 5 };
 
@@ -74,5 +75,12 @@ describe('alimenti personali', () => {
     ]);
     await eliminaAlimentoPersonale(zucchine.id);
     expect(await leggiAlimentoPersonale(zucchine.id)).toBeUndefined();
+  });
+
+  it('eliminando un alimento elimina anche le sue unità', async () => {
+    const yogurt = await salvaAlimentoPersonale({ nome: 'Yogurt greco', valori });
+    await salvaUnitaPersonali(yogurt.id, [{ nome: 'vasetto', grammi: 125 }]);
+    await eliminaAlimentoPersonale(yogurt.id);
+    expect(await leggiUnitaPersonali(yogurt.id)).toEqual([]);
   });
 });

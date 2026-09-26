@@ -1,16 +1,29 @@
 import { chiaveAlimento } from './alimenti';
 import { giorniTra } from './date';
-import { PASTI, type AlimentoPersonale, type Impostazioni, type Pasto, type ValoriNutrizionali, type VoceDiario } from './tipi';
+import {
+  PASTI,
+  type AlimentoPersonale,
+  type Impostazioni,
+  type Pasto,
+  type Unita,
+  type UnitaAlimento,
+  type ValoriNutrizionali,
+  type VoceDiario,
+} from './tipi';
+import { validaQuantitaUnita, validaUnita } from './unita';
 import { validaGrammi, validaObiettivoKcal, validaValoriPer100g } from './validazione';
 
 export const APP_BACKUP = 'MyDiet';
-export const FORMATO_BACKUP = 1;
+/** Formato attuale. Il formato 1 (senza unità) resta importabile. */
+export const FORMATO_BACKUP = 2;
 
 /** Tutti i dati dell'utente. */
 export interface DatiUtente {
   alimenti: AlimentoPersonale[];
   diario: VoceDiario[];
   impostazioni: Impostazioni;
+  /** unità definite dall'utente, per alimento */
+  unita: UnitaAlimento[];
 }
 
 export interface FileBackup extends DatiUtente {
@@ -83,6 +96,35 @@ function leggiAlimento(valore: unknown): AlimentoPersonale | undefined {
   return { id: valore.id, origine: 'personale', nome: valore.nome, ...marca, valori };
 }
 
+function leggiUnita(valore: unknown, altre: readonly Unita[]): Unita | undefined {
+  if (!oggetto(valore) || typeof valore.nome !== 'string' || !numero(valore.grammi)) return undefined;
+  const unita = { nome: valore.nome, grammi: valore.grammi };
+  return validaUnita(unita, altre).length === 0 ? unita : undefined;
+}
+
+function leggiUnitaAlimento(valore: unknown): UnitaAlimento | undefined {
+  if (!oggetto(valore) || !testo(valore.alimentoId) || !Array.isArray(valore.unita) || valore.unita.length === 0) {
+    return undefined;
+  }
+  const unita: Unita[] = [];
+  for (const u of valore.unita) {
+    const letta = leggiUnita(u, unita);
+    if (!letta) return undefined;
+    unita.push(letta);
+  }
+  return { alimentoId: valore.alimentoId, unita };
+}
+
+function leggiMisura(valore: unknown, grammi: number): { misura?: VoceDiario['misura'] } | undefined {
+  if (valore === undefined) return {};
+  if (!oggetto(valore) || !numero(valore.quantita) || validaQuantitaUnita(valore.quantita).length > 0) return undefined;
+  const unita = leggiUnita(valore.unita, []);
+  if (!unita) return undefined;
+  // I grammi della voce devono corrispondere a quantità × unità
+  if (Math.abs(valore.quantita * unita.grammi - grammi) > 0.01) return undefined;
+  return { misura: { quantita: valore.quantita, unita } };
+}
+
 function leggiVoce(valore: unknown): VoceDiario | undefined {
   if (!oggetto(valore) || !testo(valore.id) || !dataValida(valore.data)) return undefined;
   if (!PASTI.includes(valore.pasto as Pasto)) return undefined;
@@ -91,12 +133,14 @@ function leggiVoce(valore: unknown): VoceDiario | undefined {
   if (!oggetto(alimento) || !testo(alimento.id) || !testo(alimento.nome)) return undefined;
   const marca = leggiMarca(alimento.marca);
   const valori = leggiValori(alimento.valori);
-  if (!marca || !valori) return undefined;
+  const misura = leggiMisura(valore.misura, valore.grammi);
+  if (!marca || !valori || !misura) return undefined;
   return {
     id: valore.id,
     data: valore.data,
     pasto: valore.pasto as Pasto,
     grammi: valore.grammi,
+    ...misura,
     alimento: { id: alimento.id, nome: alimento.nome, ...marca, valori },
   };
 }
@@ -147,22 +191,33 @@ export function leggiBackup(contenuto: string): EsitoBackup {
   if (!oggetto(dati) || dati.app !== APP_BACKUP) {
     return { ok: false, errori: ['Il file non è un backup di MyDiet.'] };
   }
-  if (dati.formato !== FORMATO_BACKUP) {
+  if (dati.formato !== 1 && dati.formato !== FORMATO_BACKUP) {
     return {
       ok: false,
       errori: ['Il backup è stato creato da una versione diversa di MyDiet e non può essere importato.'],
     };
   }
-  if (!Array.isArray(dati.alimenti) || !Array.isArray(dati.diario) || typeof dati.esportato !== 'string') {
+  const unitaGrezze = dati.formato === 1 ? [] : dati.unita;
+  if (
+    !Array.isArray(dati.alimenti) ||
+    !Array.isArray(dati.diario) ||
+    !Array.isArray(unitaGrezze) ||
+    typeof dati.esportato !== 'string'
+  ) {
     return { ok: false, errori: ['Il backup è incompleto o danneggiato.'] };
   }
 
   const errori: string[] = [];
   const alimenti = elenco(dati.alimenti, leggiAlimento, (n) => `L’alimento n. ${n} non è valido.`, errori);
   const diario = elenco(dati.diario, leggiVoce, (n) => `La voce del diario n. ${n} non è valida.`, errori);
+  const unita = elenco(unitaGrezze, leggiUnitaAlimento, (n) => `Le unità n. ${n} non sono valide.`, errori);
   const impostazioni = leggiImpostazioni(dati.impostazioni);
   if (!impostazioni) errori.push('Le impostazioni non sono valide.');
-  if (duplicati(alimenti.map((a) => a.id)) || duplicati(diario.map((v) => v.id))) {
+  if (
+    duplicati(alimenti.map((a) => a.id)) ||
+    duplicati(diario.map((v) => v.id)) ||
+    duplicati(unita.map((u) => u.alimentoId))
+  ) {
     errori.push('Il backup contiene dati ripetuti.');
   }
   if (duplicati(alimenti.map((a) => chiaveAlimento(a.nome, a.marca)))) {
@@ -172,7 +227,7 @@ export function leggiBackup(contenuto: string): EsitoBackup {
 
   return {
     ok: true,
-    backup: { app: APP_BACKUP, formato: FORMATO_BACKUP, esportato: dati.esportato, alimenti, diario, impostazioni },
+    backup: { app: APP_BACKUP, formato: FORMATO_BACKUP, esportato: dati.esportato, alimenti, diario, impostazioni, unita },
   };
 }
 

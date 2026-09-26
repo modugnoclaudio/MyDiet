@@ -619,3 +619,39 @@ legend {
   width: 100%;
   margin-top: 0.5rem;
 }
+
+/* Unità */
+.campo-quantita {
+  flex: 0 0 7rem;
+}
+
+.gestione-unita .nota {
+  margin-top: 0;
+}
+
+.unita-elenco {
+  list-style: none;
+  margin: 0 0 0.5rem;
+  padding: 0;
+}
+
+.unita-elenco li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.25rem 0;
+  border-bottom: 1px solid var(--bordo);
+}
+
+.pulsante-icona.piccolo {
+  width: 2.25rem;
+  height: 2.25rem;
+  font-size: 1.2rem;
+}
+
+.unita-nuova {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}

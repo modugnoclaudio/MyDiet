@@ -98,6 +98,16 @@ describe('creaVoce', () => {
     expect(voce.alimento.nome).toBe('Yogurt greco');
   });
 
+  it('salva la quantità in unità, se indicata', () => {
+    const unita = { nome: 'vasetto', grammi: 125 };
+    const voce = creaVoce(yogurt, '2026-09-24', 'colazione', 250, { quantita: 2, unita });
+    expect(voce.grammi).toBe(250);
+    expect(voce.misura).toEqual({ quantita: 2, unita: { nome: 'vasetto', grammi: 125 } });
+    unita.grammi = 999;
+    expect(voce.misura?.unita.grammi).toBe(125);
+    expect('misura' in creaVoce(yogurt, '2026-09-24', 'colazione', 250)).toBe(false);
+  });
+
   it('per gli alimenti di base non ha marca', () => {
     const mela: AlimentoBase = {
       id: 'crea-007120',

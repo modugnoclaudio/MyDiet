@@ -51,7 +51,20 @@ describe('ALIMENTI_BASE (tabelle CREA)', () => {
       nome: 'Farro perlato, crudo',
       categoria: 'Cereali e derivati',
       valori: { kcal: 353, carboidrati: 69.3, proteine: 14.6, grassi: 2.4, fibre: 6.5 },
+      porzione: 80,
     });
+  });
+
+  it('riporta la porzione standard CREA, positiva, quasi sempre presente', () => {
+    const conPorzione = ALIMENTI_BASE.filter((a) => a.porzione !== undefined);
+    expect(conPorzione.length).toBeGreaterThan(ALIMENTI_BASE.length * 0.95);
+    expect(conPorzione.every((a) => a.porzione! > 0 && a.porzione! <= 500)).toBe(true);
+    expect(ALIMENTI_BASE.find((a) => a.id === 'crea-181100')?.porzione).toBe(50);
+  });
+
+  it('per le uova di gallina la porzione di albume e tuorlo fa un uovo intero', () => {
+    const porzione = (id: string) => ALIMENTI_BASE.find((a) => a.id === id)?.porzione;
+    expect(porzione('crea-182010')! + porzione('crea-183010')!).toBe(porzione('crea-181100'));
   });
 
   it('lascia le fibre non indicate dove il CREA non le riporta', () => {

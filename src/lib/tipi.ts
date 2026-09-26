@@ -24,6 +24,19 @@ export const ETICHETTE_PASTI: Readonly<Record<Pasto, string>> = {
   spuntino: 'Spuntino',
 };
 
+/** Unità di misura alternativa ai grammi, es. { nome: 'uovo', grammi: 50 }. */
+export interface Unita {
+  nome: string;
+  /** grammi di una unità */
+  grammi: number;
+}
+
+/** Unità definite dall'utente per un alimento (di base o personale). */
+export interface UnitaAlimento {
+  alimentoId: string;
+  unita: Unita[];
+}
+
 /** Alimento della tabella statica di base (fonte CREA), non modificabile. */
 export interface AlimentoBase {
   id: string;
@@ -32,6 +45,8 @@ export interface AlimentoBase {
   categoria: string;
   /** per 100 g */
   valori: ValoriNutrizionali;
+  /** porzione standard CREA in grammi, se indicata */
+  porzione?: number;
 }
 
 /** Alimento creato dall'utente e salvato sul dispositivo. */
@@ -55,7 +70,10 @@ export interface VoceDiario {
   /** data locale in formato `YYYY-MM-DD` */
   data: string;
   pasto: Pasto;
+  /** quantità effettiva in grammi (usata per tutti i calcoli) */
   grammi: number;
+  /** se inserita in unità (es. 3 uova), la quantità e l'unità usate */
+  misura?: { quantita: number; unita: Unita };
   alimento: {
     id: string;
     nome: string;
