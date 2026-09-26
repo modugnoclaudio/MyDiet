@@ -2,7 +2,7 @@
 import { defineConfig } from 'vite';
 import preact from '@preact/preset-vite';
 import { VitePWA } from 'vite-plugin-pwa';
-import { pluginSicurezza } from './scripts/csp';
+import { pluginSicurezza } from './scripts/csp.ts';
 
 // Su GitHub Pages l'app è servita da https://<utente>.github.io/MyDiet/
 const base = process.env.GITHUB_PAGES === 'true' ? '/MyDiet/' : '/';

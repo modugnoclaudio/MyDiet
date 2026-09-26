@@ -4,6 +4,7 @@ import { totaleVoci } from '../lib/diario';
 import { etichettaGiorno, formattaNumero } from '../lib/formato';
 import { leggiVociDelGiorno, giorniConVoci } from '../db/diario';
 import { leggiImpostazioni } from '../db/impostazioni';
+import { Andamento } from './Andamento';
 
 interface Props {
   oggi: string;
@@ -35,6 +36,8 @@ export function Storico({ oggi, onApriGiorno }: Props) {
   return (
     <div class="storico">
       <h1>Storico</h1>
+      <Andamento oggi={oggi} onApriGiorno={onApriGiorno} />
+      <h2 class="titolo-sezione">Tutti i giorni</h2>
       {giorni === null ? (
         <p class="nota">Caricamento…</p>
       ) : giorni.length === 0 ? (
