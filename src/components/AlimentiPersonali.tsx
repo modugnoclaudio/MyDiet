@@ -6,6 +6,7 @@ import type { AlimentoPersonale } from '../lib/tipi';
 import { eliminaAlimentoPersonale, elencaAlimentiPersonali } from '../db/alimenti';
 import { Dialogo } from './Dialogo';
 import { ModuloAlimento } from './ModuloAlimento';
+import { PastiPreferiti } from './PastiPreferiti';
 
 /** Elenco e gestione degli alimenti creati dall'utente. */
 export function AlimentiPersonali() {
@@ -67,6 +68,8 @@ export function AlimentiPersonali() {
           ))}
         </ul>
       )}
+
+      <PastiPreferiti />
 
       {inModifica !== undefined && (
         <Dialogo titolo={inModifica ? 'Modifica alimento' : 'Nuovo alimento'} onChiudi={chiudi}>

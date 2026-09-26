@@ -2,7 +2,7 @@ import { PASTI, type Alimento, type Pasto, type Unita, type ValoriNutrizionali, 
 import { sommaValori, valoriPerGrammi } from './valori';
 
 /** Valori nutrizionali effettivi di una voce del diario (in base ai grammi). */
-export function valoriVoce(voce: VoceDiario): ValoriNutrizionali {
+export function valoriVoce(voce: Pick<VoceDiario, 'grammi' | 'alimento'>): ValoriNutrizionali {
   return valoriPerGrammi(voce.alimento.valori, voce.grammi);
 }
 
@@ -12,7 +12,7 @@ export function vociDelGiorno(voci: readonly VoceDiario[], data: string): VoceDi
 }
 
 /** Totale dei valori nutrizionali di un insieme di voci. */
-export function totaleVoci(voci: readonly VoceDiario[]): ValoriNutrizionali {
+export function totaleVoci(voci: readonly Pick<VoceDiario, 'grammi' | 'alimento'>[]): ValoriNutrizionali {
   return sommaValori(voci.map(valoriVoce));
 }
 

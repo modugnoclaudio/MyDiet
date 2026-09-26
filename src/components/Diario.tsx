@@ -8,6 +8,7 @@ import { leggiImpostazioni } from '../db/impostazioni';
 import { AggiungiVoce } from './AggiungiVoce';
 import { ModificaVoce } from './ModificaVoce';
 import { RiepilogoGiorno } from './RiepilogoGiorno';
+import { SalvaPastoPreferito } from './SalvaPastoPreferito';
 import { SezionePasto } from './SezionePasto';
 
 interface Props {
@@ -22,6 +23,8 @@ export function Diario({ data, oggi, onCambiaData }: Props) {
   const [impostazioni, setImpostazioni] = useState<Impostazioni | null>(null);
   const [aggiungiA, setAggiungiA] = useState<Pasto | null>(null);
   const [inModifica, setInModifica] = useState<VoceDiario | null>(null);
+  const [daSalvare, setDaSalvare] = useState<{ pasto: Pasto; voci: VoceDiario[] } | null>(null);
+  const [messaggio, setMessaggio] = useState('');
   const sceltaData = useRef<HTMLInputElement>(null);
   const titolo = etichettaGiorno(data, oggi, spostaGiorni(oggi, -1));
 
@@ -38,6 +41,9 @@ export function Diario({ data, oggi, onCambiaData }: Props) {
 
   const chiudiAggiungi = useCallback(() => setAggiungiA(null), []);
   const chiudiModifica = useCallback(() => setInModifica(null), []);
+  const chiudiSalvataggio = useCallback(() => setDaSalvare(null), []);
+
+  useEffect(() => setMessaggio(''), [data]);
 
   return (
     <div class="diario">
@@ -94,13 +100,22 @@ export function Diario({ data, oggi, onCambiaData }: Props) {
       ) : (
         <>
           <RiepilogoGiorno totale={totaleVoci(voci)} obiettivoKcal={impostazioni.obiettivoKcal} />
+          {messaggio && (
+            <p class="conferma" role="status">
+              {messaggio}
+            </p>
+          )}
           {PASTI.map((pasto) => (
             <SezionePasto
               key={pasto}
               pasto={pasto}
               voci={voci.filter((voce) => voce.pasto === pasto)}
-              onAggiungi={setAggiungiA}
+              onAggiungi={(p) => {
+                setMessaggio('');
+                setAggiungiA(p);
+              }}
               onModifica={setInModifica}
+              onSalvaPreferito={(p, v) => setDaSalvare({ pasto: p, voci: v })}
             />
           ))}
         </>
@@ -114,6 +129,17 @@ export function Diario({ data, oggi, onCambiaData }: Props) {
           onAggiunta={() => {
             setAggiungiA(null);
             void carica();
+          }}
+        />
+      )}
+      {daSalvare && (
+        <SalvaPastoPreferito
+          pasto={daSalvare.pasto}
+          voci={daSalvare.voci}
+          onChiudi={chiudiSalvataggio}
+          onSalvato={(nome) => {
+            setDaSalvare(null);
+            setMessaggio(`Pasto preferito “${nome}” salvato.`);
           }}
         />
       )}

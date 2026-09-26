@@ -1,14 +1,17 @@
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import { ALIMENTI_BASE, FONTE_ALIMENTI_BASE } from '../data/alimentiBase';
 import { nomeCompleto } from '../lib/alimenti';
-import { creaVoce } from '../lib/diario';
+import { spostaGiorni } from '../lib/date';
+import { creaVoce, totaleVoci } from '../lib/diario';
 import { formattaNumero } from '../lib/formato';
 import { cercaAlimenti } from '../lib/ricerca';
-import type { Alimento, AlimentoPersonale, Pasto, Unita } from '../lib/tipi';
+import { usatiSpesso, vociDaElementi } from '../lib/preferiti';
+import type { Alimento, AlimentoPersonale, Pasto, PastoPreferito, Unita, VoceDiario } from '../lib/tipi';
 import { descriviMisura, leggiQuantita, unitaDisponibili, unitaIniziale } from '../lib/unita';
 import { valoriPerGrammi } from '../lib/valori';
 import { elencaAlimentiPersonali } from '../db/alimenti';
-import { aggiungiVoce } from '../db/diario';
+import { aggiungiVoce, aggiungiVoci, leggiVociTraDate } from '../db/diario';
+import { elencaPastiPreferiti } from '../db/pastiPreferiti';
 import { leggiUnitaPersonali, salvaUnitaPersonali } from '../db/unita';
 import { CampoQuantita } from './CampoQuantita';
 import { Dialogo } from './Dialogo';
@@ -36,24 +39,54 @@ export function AggiungiVoce({ data, pasto: pastoIniziale, onChiudi, onAggiunta 
   const [pasto, setPasto] = useState(pastoIniziale);
   const [errori, setErrori] = useState<string[]>([]);
 
+  const [pastiPreferiti, setPastiPreferiti] = useState<PastoPreferito[]>([]);
+  const [vociRecenti, setVociRecenti] = useState<VoceDiario[]>([]);
+
   useEffect(() => {
     void elencaAlimentiPersonali().then(setPersonali);
-  }, []);
+    void elencaPastiPreferiti().then(setPastiPreferiti);
+    void leggiVociTraDate(spostaGiorni(data, -59), data).then(setVociRecenti);
+  }, [data]);
+
+  const perId = useMemo(() => new Map<string, Alimento>([...ALIMENTI_BASE, ...personali].map((a) => [a.id, a])), [personali]);
+  const frequenti = useMemo(
+    () =>
+      usatiSpesso(vociRecenti, pasto, data)
+        .map((u) => ({ ...u, alimento: perId.get(u.alimentoId) }))
+        .filter((u): u is typeof u & { alimento: Alimento } => u.alimento !== undefined),
+    [vociRecenti, pasto, data, perId],
+  );
+
+  async function aggiungiSubito(azione: () => Promise<unknown>) {
+    try {
+      await azione();
+      onAggiunta();
+    } catch {
+      setErrori(['Non è stato possibile salvare. Riprova.']);
+    }
+  }
 
   const risultati = useMemo(
     () => (ricerca.trim() ? cercaAlimenti<Alimento>([...personali, ...ALIMENTI_BASE], ricerca, 40) : personali),
     [ricerca, personali],
   );
 
-  function scegli(alimento: Alimento) {
+  /** Passa all'inserimento della quantità, eventualmente precompilata (es. dall'ultima volta). */
+  function scegli(alimento: Alimento, precompilata?: Pick<VoceDiario, 'grammi' | 'misura'>) {
     setSelezionato(alimento);
-    setQuantita('');
     setErrori([]);
     setUnitaPersonali([]);
-    setUnita(unitaIniziale(unitaDisponibili(alimento, []), []));
+    const testo = (n: number) => String(n).replace('.', ',');
+    if (precompilata) {
+      setQuantita(testo(precompilata.misura ? precompilata.misura.quantita : precompilata.grammi));
+      setUnita(precompilata.misura?.unita ?? null);
+    } else {
+      setQuantita('');
+      setUnita(unitaIniziale(unitaDisponibili(alimento, []), []));
+    }
     void leggiUnitaPersonali(alimento.id).then((personali) => {
       setUnitaPersonali(personali);
-      setUnita(unitaIniziale(unitaDisponibili(alimento, personali), personali));
+      if (!precompilata) setUnita(unitaIniziale(unitaDisponibili(alimento, personali), personali));
     });
   }
 
@@ -173,6 +206,66 @@ export function AggiungiVoce({ data, pasto: pastoIniziale, onChiudi, onAggiunta 
         autofocus
         onInput={(e) => setRicerca(e.currentTarget.value)}
       />
+      {!ricerca.trim() && pastiPreferiti.length > 0 && (
+        <>
+          <h3 class="sottotitolo">Pasti preferiti</h3>
+          <ul class="elenco">
+            {pastiPreferiti.map((preferito) => (
+              <li key={preferito.id}>
+                <button
+                  type="button"
+                  class="riga"
+                  onClick={() =>
+                    void aggiungiSubito(() => aggiungiVoci(vociDaElementi(preferito.elementi, data, pasto, (id) => perId.get(id))))
+                  }
+                >
+                  <span class="riga-nome">{preferito.nome}</span>
+                  <span class="riga-dettaglio">
+                    {preferito.elementi.length === 1 ? '1 alimento' : `${preferito.elementi.length} alimenti`} · tocca per
+                    aggiungere
+                  </span>
+                  <span class="riga-kcal">{formattaNumero(totaleVoci(preferito.elementi).kcal)} kcal</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      {!ricerca.trim() && frequenti.length > 0 && (
+        <>
+          <h3 class="sottotitolo">Usati spesso · tocca per aggiungere</h3>
+          <ul class="elenco">
+            {frequenti.map(({ alimento, ultima }) => (
+              <li key={alimento.id} class="riga-con-azione">
+                <button
+                  type="button"
+                  class="riga"
+                  onClick={() =>
+                    void aggiungiSubito(() => aggiungiVoce(creaVoce(alimento, data, pasto, ultima.grammi, ultima.misura)))
+                  }
+                >
+                  <span class="riga-nome">{nomeCompleto(alimento)}</span>
+                  <span class="riga-dettaglio">
+                    {ultima.misura
+                      ? `${descriviMisura(ultima.misura.quantita, ultima.misura.unita, formattaNumero)} · ${formattaNumero(ultima.grammi, 1)} g`
+                      : `${formattaNumero(ultima.grammi, 1)} g`}
+                  </span>
+                  <span class="riga-kcal">{formattaNumero(valoriPerGrammi(alimento.valori, ultima.grammi).kcal)} kcal</span>
+                </button>
+                <button
+                  type="button"
+                  class="pulsante-icona piccolo"
+                  aria-label={`Cambia quantità di ${nomeCompleto(alimento)}`}
+                  onClick={() => scegli(alimento, ultima)}
+                >
+                  ✎
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      <Errori errori={errori} />
       {!ricerca.trim() && personali.length > 0 && <h3 class="sottotitolo">I tuoi alimenti</h3>}
       {ricerca.trim() && risultati.length === 0 && <p class="nota">Nessun alimento trovato.</p>}
       <ul class="elenco risultati">
