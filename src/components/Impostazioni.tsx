@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import { FONTE_ALIMENTI_BASE } from '../data/alimentiBase';
-import { leggiNumero } from '../lib/formato';
+import { formattaNumero, leggiNumero } from '../lib/formato';
+import { validaPeso } from '../lib/peso';
 import { validaObiettivoKcal } from '../lib/validazione';
 import { leggiImpostazioni, salvaImpostazioni } from '../db/impostazioni';
 import { Backup } from './Backup';
@@ -13,12 +14,14 @@ interface Props {
 /** Obiettivo giornaliero di kcal, backup e informazioni sull'app. */
 export function Impostazioni({ oggi }: Props) {
   const [obiettivo, setObiettivo] = useState('');
+  const [pesoObiettivo, setPesoObiettivo] = useState('');
   const [errori, setErrori] = useState<string[]>([]);
   const [messaggio, setMessaggio] = useState('');
 
   async function caricaObiettivo() {
     const impostazioni = await leggiImpostazioni();
     setObiettivo(impostazioni.obiettivoKcal === null ? '' : String(impostazioni.obiettivoKcal));
+    setPesoObiettivo(impostazioni.pesoObiettivo === null ? '' : formattaNumero(impostazioni.pesoObiettivo, 1));
   }
 
   useEffect(() => {
@@ -29,14 +32,21 @@ export function Impostazioni({ oggi }: Props) {
     evento.preventDefault();
     setMessaggio('');
     const kcal = leggiNumero(obiettivo);
-    const erroriKcal = kcal === undefined ? [] : validaObiettivoKcal(kcal);
-    if (erroriKcal.length > 0) {
-      setErrori(erroriKcal);
+    const kg = leggiNumero(pesoObiettivo);
+    const erroriCampi = [
+      ...(kcal === undefined ? [] : validaObiettivoKcal(kcal)),
+      ...(kg === undefined ? [] : validaPeso(kg, 'Il peso obiettivo')),
+    ];
+    if (erroriCampi.length > 0) {
+      setErrori(erroriCampi);
       return;
     }
     setErrori([]);
-    await salvaImpostazioni({ obiettivoKcal: kcal === undefined ? null : Math.round(kcal) });
-    setMessaggio(kcal === undefined ? 'Obiettivo rimosso.' : 'Obiettivo salvato.');
+    await salvaImpostazioni({
+      obiettivoKcal: kcal === undefined ? null : Math.round(kcal),
+      pesoObiettivo: kg === undefined ? null : Math.round(kg * 10) / 10,
+    });
+    setMessaggio('Obiettivi salvati.');
   }
 
   return (
@@ -54,7 +64,18 @@ export function Impostazioni({ oggi }: Props) {
             onInput={(e) => setObiettivo(e.currentTarget.value)}
           />
         </label>
-        <p class="nota">Lascia vuoto per non usare un obiettivo.</p>
+        <label class="campo">
+          <span>Peso obiettivo (kg)</span>
+          <input
+            type="text"
+            inputMode="decimal"
+            autoComplete="off"
+            placeholder="Es. 68"
+            value={pesoObiettivo}
+            onInput={(e) => setPesoObiettivo(e.currentTarget.value)}
+          />
+        </label>
+        <p class="nota">Facoltativi: lascia vuoto un campo per non usare quell’obiettivo. Il peso obiettivo compare nel grafico del peso, nello Storico.</p>
         <Errori errori={errori} />
         {messaggio && (
           <p class="conferma" role="status">

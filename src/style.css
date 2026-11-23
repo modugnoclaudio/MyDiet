@@ -14,6 +14,8 @@
   /* Grafici: coppie verificate con lo strumento CVD (verde/ambra, ΔE ≥ 8) */
   --grafico-entro: #1e6f3a;
   --grafico-oltre: #e8870a;
+  /* linea e punti del grafico del peso: contrasto ≥ 3:1 sulla superficie (6,2:1 in chiaro) */
+  --grafico-linea: #1e6f3a;
   color-scheme: light dark;
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   line-height: 1.45;
@@ -37,6 +39,8 @@
     --ombra: none;
     --grafico-entro: #2a7a3f;
     --grafico-oltre: #d07f12;
+    /* 6,0:1 sulla superficie scura */
+    --grafico-linea: #4caf6a;
   }
 }
 
@@ -820,6 +824,67 @@ legend {
   paint-order: stroke;
   stroke: var(--superficie);
   stroke-width: 3px;
+}
+
+.grafico-obiettivo.tratteggiato line {
+  stroke-dasharray: 6 4;
+}
+
+.grafico-peso-linea {
+  fill: none;
+  stroke: var(--grafico-linea);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.grafico-peso-punto {
+  cursor: pointer;
+  outline: none;
+}
+
+.grafico-peso-area {
+  fill: transparent;
+  cursor: pointer;
+}
+
+.grafico-peso-linea {
+  pointer-events: none;
+}
+
+.grafico-peso-cerchio {
+  pointer-events: none;
+  fill: var(--grafico-linea);
+  stroke: var(--superficie);
+  stroke-width: 2;
+}
+
+/* Punti piccoli (pesate fitte): senza anello, che spezzerebbe la linea facendola sembrare tratteggiata */
+.grafico-peso-cerchio.piccolo {
+  stroke: none;
+}
+
+.grafico-peso-punto.attivo .grafico-peso-cerchio,
+.grafico-peso-punto:focus-visible .grafico-peso-cerchio {
+  stroke: var(--testo);
+}
+
+/* Anche un punto nascosto perché troppo fitto si vede quando riceve il focus da tastiera */
+.grafico-peso-punto:focus-visible .grafico-peso-cerchio {
+  r: 6px;
+}
+
+.peso-giorno {
+  background: var(--superficie);
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio);
+  box-shadow: var(--ombra);
+  padding: 0 1rem;
+  margin-top: 1rem;
+}
+
+.andamento-peso {
+  margin-top: 1rem;
 }
 
 .grafico-legenda {

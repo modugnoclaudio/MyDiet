@@ -44,13 +44,14 @@ Gli aggiornamenti arrivano da soli: basta chiudere e riaprire l'app.
 | **Quantità in unità** | Oltre ai grammi: "3 uova", "1 porzione", o unità tue come "1 vasetto = 125 g" |
 | **Preferiti** | Alimenti *usati spesso* da aggiungere con un tocco e *pasti preferiti* (es. "Colazione classica") da inserire tutti insieme |
 | **Andamento** | Grafico delle kcal per settimana o per mese, con linea dell'obiettivo, medie giornaliere e tabella dei valori |
+| **Peso corporeo** | Una pesata al giorno dal Diario o dallo Storico, grafico per mese, 3 mesi o anno, variazione nel periodo e peso obiettivo facoltativo |
 | **Backup** | Esporta tutti i dati in un file JSON e reimportali, ad esempio quando cambi telefono |
 
 ---
 
 ## Privacy e sicurezza
 
-- Tutti i dati (diario, alimenti, impostazioni) sono salvati **nel browser del dispositivo** (IndexedDB). Nessuno, nemmeno l'autore, può vederli.
+- Tutti i dati (diario, alimenti, ricette, pesate, impostazioni) sono salvati **nel browser del dispositivo** (IndexedDB). Nessuno, nemmeno l'autore, può vederli.
 - L'app non fa richieste verso altri siti: lo impone una Content Security Policy che permette solo lo stesso indirizzo dell'app.
 - Se cancelli i dati del browser o cambi telefono i dati si perdono: per questo c'è il **backup**, e l'app ricorda di farlo se l'ultimo ha più di 30 giorni.
 

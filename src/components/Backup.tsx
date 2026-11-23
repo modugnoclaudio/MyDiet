@@ -17,12 +17,14 @@ interface ImportazioneDaConfermare {
   attuali: RiepilogoDati;
 }
 
-function descrivi({ alimenti, voci, giorni }: RiepilogoDati): string {
+function descrivi({ alimenti, voci, giorni, pesate }: RiepilogoDati): string {
+  const diario = voci === 1 ? '1 voce del diario' : `${voci} voci del diario`;
   const parti = [
     alimenti === 1 ? '1 alimento personale' : `${alimenti} alimenti personali`,
-    voci === 1 ? '1 voce del diario' : `${voci} voci del diario`,
+    giorni > 0 ? `${diario} (${giorni === 1 ? '1 giorno' : `${giorni} giorni`})` : diario,
+    ...(pesate > 0 ? [pesate === 1 ? '1 pesata' : `${pesate} pesate`] : []),
   ];
-  return giorni > 0 ? `${parti.join(' e ')} (${giorni === 1 ? '1 giorno' : `${giorni} giorni`})` : parti.join(' e ');
+  return `${parti.slice(0, -1).join(', ')} e ${parti[parti.length - 1]}`;
 }
 
 /** Esportazione dei dati in un file e importazione da un file di backup. */
@@ -38,7 +40,7 @@ export function Backup({ oggi, onImportato }: Props) {
     const dati = await leggiTuttiIDati();
     const riepilogo = riepilogoDati(dati);
     setUltimoBackup(dati.impostazioni.ultimoBackup);
-    setCiSonoDati(riepilogo.alimenti + riepilogo.voci > 0);
+    setCiSonoDati(riepilogo.alimenti + riepilogo.voci + riepilogo.pesate > 0);
   }
 
   useEffect(() => {

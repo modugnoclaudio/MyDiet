@@ -90,6 +90,15 @@ export interface Impostazioni {
   obiettivoKcal: number | null;
   /** data (`YYYY-MM-DD`) dell'ultima esportazione dei dati; `null` = mai */
   ultimoBackup: string | null;
+  /** peso corporeo obiettivo in kg; `null` = non impostato */
+  pesoObiettivo: number | null;
+}
+
+/** Peso corporeo registrato in un giorno (al massimo una pesata per giorno). */
+export interface Pesata {
+  /** data locale `YYYY-MM-DD` */
+  data: string;
+  kg: number;
 }
 
 /** Un alimento di un pasto preferito: come una voce del diario, senza data e pasto. */

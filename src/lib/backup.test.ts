@@ -48,7 +48,7 @@ const dati: DatiUtente = {
       alimento: { id: 'a2', nome: 'Pane di casa', valori: { kcal: 270, carboidrati: 55, proteine: 9, grassi: 1, fibre: 3 } },
     },
   ],
-  impostazioni: { obiettivoKcal: 1800, ultimoBackup: '2026-09-01' },
+  impostazioni: { obiettivoKcal: 1800, ultimoBackup: '2026-09-01', pesoObiettivo: 68 },
   unita: [
     { alimentoId: 'a1', unita: [{ nome: 'vasetto', grammi: 125 }] },
     { alimentoId: 'crea-181100', unita: [{ nome: 'uovo grande', grammi: 60 }] },
@@ -66,6 +66,10 @@ const dati: DatiUtente = {
       ],
     },
   ],
+  peso: [
+    { data: '2026-09-20', kg: 72.8 },
+    { data: '2026-09-24', kg: 72.4 },
+  ],
 };
 
 const esportato = new Date('2026-09-24T18:30:00Z');
@@ -80,7 +84,7 @@ describe('creaBackup e leggiBackup', () => {
   it('rileggono esattamente i dati esportati', () => {
     expect(leggiBackup(creaBackup(dati, esportato))).toEqual({
       ok: true,
-      backup: { app: 'MyDiet', formato: 4, esportato: '2026-09-24T18:30:00.000Z', ...dati },
+      backup: { app: 'MyDiet', formato: 5, esportato: '2026-09-24T18:30:00.000Z', ...dati },
     });
   });
 
@@ -88,9 +92,10 @@ describe('creaBackup e leggiBackup', () => {
     const vuoto: DatiUtente = {
       alimenti: [],
       diario: [],
-      impostazioni: { obiettivoKcal: null, ultimoBackup: null },
+      impostazioni: { obiettivoKcal: null, ultimoBackup: null, pesoObiettivo: null },
       unita: [],
       pastiPreferiti: [],
+      peso: [],
     };
     const esito = leggiBackup(creaBackup(vuoto, esportato));
     expect(esito.ok && esito.backup.alimenti).toEqual([]);
@@ -109,7 +114,7 @@ describe('creaBackup e leggiBackup', () => {
 
   it('accettano impostazioni senza ultimo backup (campo mancante)', () => {
     const esito = leggiBackup(modifica((b) => (b.impostazioni = { obiettivoKcal: 2000 })));
-    expect(esito.ok && esito.backup.impostazioni).toEqual({ obiettivoKcal: 2000, ultimoBackup: null });
+    expect(esito.ok && esito.backup.impostazioni).toEqual({ obiettivoKcal: 2000, ultimoBackup: null, pesoObiettivo: null });
   });
 });
 
@@ -123,7 +128,7 @@ describe('backup nel formato 1 (prima delle unità)', () => {
     });
     const esito = leggiBackup(vecchio);
     expect(esito.ok && esito.backup.unita).toEqual([]);
-    expect(esito.ok && esito.backup.formato).toBe(4);
+    expect(esito.ok && esito.backup.formato).toBe(5);
     expect(esito.ok && esito.backup.pastiPreferiti).toEqual([]);
     expect(esito.ok && esito.backup.diario[0]).not.toHaveProperty('misura');
   });
@@ -152,6 +157,46 @@ describe('backup nel formato 3 (prima delle ricette)', () => {
     );
     expect(esito.ok && esito.backup.alimenti).toEqual(dati.alimenti.slice(0, 2));
     expect(esito.ok && esito.backup.pastiPreferiti).toEqual(dati.pastiPreferiti);
+  });
+});
+
+describe('backup nel formato 4 (prima del peso)', () => {
+  it('si importa ancora, senza pesate', () => {
+    const esito = leggiBackup(
+      modifica((b) => {
+        b.formato = 4;
+        delete b.peso;
+        delete (b.impostazioni as Record<string, unknown>).pesoObiettivo;
+      }),
+    );
+    expect(esito.ok && esito.backup.peso).toEqual([]);
+    expect(esito.ok && esito.backup.impostazioni.pesoObiettivo).toBeNull();
+    expect(esito.ok && esito.backup.alimenti).toEqual(dati.alimenti);
+  });
+});
+
+describe('pesate nel backup', () => {
+  it('rifiutano date e pesi non validi, indicando quali', () => {
+    const esito = leggiBackup(
+      modifica((b) => {
+        const peso = b.peso as Record<string, unknown>[];
+        peso[0]!.kg = 5;
+        peso[1]!.data = '2026-02-30';
+      }),
+    );
+    expect(esito).toEqual({ ok: false, errori: ['La pesata n. 1 non è valida.', 'La pesata n. 2 non è valida.'] });
+  });
+
+  it('rifiutano due pesate nello stesso giorno e un peso obiettivo non valido', () => {
+    expect(leggiBackup(modifica((b) => (b.peso as unknown[]).push({ data: '2026-09-20', kg: 72 })))).toEqual({
+      ok: false,
+      errori: ['Il backup contiene dati ripetuti.'],
+    });
+    expect(leggiBackup(modifica((b) => ((b.impostazioni as Record<string, unknown>).pesoObiettivo = 'tanto'))).ok).toBe(false);
+  });
+
+  it('un backup nel formato 5 deve contenere le pesate', () => {
+    expect(leggiBackup(modifica((b) => delete b.peso))).toEqual({ ok: false, errori: ['Il backup è incompleto o danneggiato.'] });
   });
 });
 
@@ -193,7 +238,7 @@ describe('leggiBackup rifiuta', () => {
   });
 
   it('formati di versioni diverse', () => {
-    expect(leggiBackup(modifica((b) => (b.formato = 5))).ok).toBe(false);
+    expect(leggiBackup(modifica((b) => (b.formato = 6))).ok).toBe(false);
   });
 
   it('pasti preferiti non validi', () => {
@@ -298,7 +343,7 @@ describe('nomeFileBackup', () => {
 
 describe('riepilogoDati', () => {
   it('conta alimenti, voci e giorni distinti', () => {
-    expect(riepilogoDati(dati)).toEqual({ alimenti: 3, voci: 3, giorni: 2 });
+    expect(riepilogoDati(dati)).toEqual({ alimenti: 3, voci: 3, giorni: 2, pesate: 2 });
   });
 });
 
