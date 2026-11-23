@@ -1,5 +1,6 @@
 import { leggiNumero } from './formato';
 import { normalizzaTesto } from './ricerca';
+import { grammiPorzione } from './ricette';
 import type { Alimento, AlimentoBase, Unita } from './tipi';
 import { validaGrammi } from './validazione';
 
@@ -29,19 +30,29 @@ export function unitaCrea(alimento: AlimentoBase): Unita[] {
   return [{ nome: nomeUnita, grammi: alimento.porzione }];
 }
 
-/** Unità disponibili per un alimento: prima quelle dell'utente, poi quelle CREA. */
+/** Porzione di una ricetta che indica in quante porzioni si divide il piatto. */
+export function unitaRicetta(alimento: Alimento): Unita[] {
+  if (alimento.origine !== 'personale' || !alimento.ricetta) return [];
+  const grammi = grammiPorzione(alimento.ricetta);
+  return grammi === undefined ? [] : [{ nome: 'porzione', grammi }];
+}
+
+/** Unità disponibili per un alimento: prima quelle dell'utente, poi quelle CREA o della ricetta. */
 export function unitaDisponibili(alimento: Alimento, personali: readonly Unita[]): Unita[] {
   const nomi = new Set(personali.map((u) => normalizzaTesto(u.nome)));
-  const crea = alimento.origine === 'base' ? unitaCrea(alimento) : [];
-  return [...personali, ...crea.filter((u) => !nomi.has(normalizzaTesto(u.nome)))];
+  const predefinite = alimento.origine === 'base' ? unitaCrea(alimento) : unitaRicetta(alimento);
+  return [...personali, ...predefinite.filter((u) => !nomi.has(normalizzaTesto(u.nome)))];
 }
 
 /**
  * Unità da proporre quando si sceglie l'alimento: la prima dell'utente,
- * altrimenti un'unità CREA "concreta" (es. uovo), altrimenti i grammi (`null`).
+ * altrimenti la porzione di una ricetta (è quella reale del piatto),
+ * altrimenti un'unità CREA "concreta" (es. uovo; la porzione CREA è solo
+ * un valore medio), altrimenti i grammi (`null`).
  */
-export function unitaIniziale(disponibili: readonly Unita[], personali: readonly Unita[]): Unita | null {
+export function unitaIniziale(disponibili: readonly Unita[], personali: readonly Unita[], alimento?: Alimento): Unita | null {
   if (personali.length > 0) return personali[0]!;
+  if (alimento && unitaRicetta(alimento).length > 0) return disponibili.find((u) => u.nome === 'porzione') ?? null;
   return disponibili.find((u) => u.nome !== 'porzione') ?? null;
 }
 

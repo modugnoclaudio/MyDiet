@@ -40,6 +40,7 @@ Gli aggiornamenti arrivano da soli: basta chiudere e riaprire l'app.
 | **Obiettivo di kcal** | Obiettivo giornaliero impostabile, con barra di avanzamento e kcal rimanenti |
 | **Alimenti di base** | 616 alimenti dalle tabelle CREA (frutta, verdura, legumi, cereali, carne, pesce, uova, latte e yogurt, oli), con controllo di coerenza dei valori |
 | **Alimenti personali** | Nome, marca facoltativa e valori per 100 g dall'etichetta; l'app avvisa se le kcal non tornano con i nutrienti |
+| **Ricette** | Piatti fatti in casa: inserisci gli ingredienti e il peso del piatto cotto, l'app calcola i valori per 100 g e per porzione |
 | **Quantità in unità** | Oltre ai grammi: "3 uova", "1 porzione", o unità tue come "1 vasetto = 125 g" |
 | **Preferiti** | Alimenti *usati spesso* da aggiungere con un tocco e *pasti preferiti* (es. "Colazione classica") da inserire tutti insieme |
 | **Andamento** | Grafico delle kcal per settimana o per mese, con linea dell'obiettivo, medie giornaliere e tabella dei valori |
