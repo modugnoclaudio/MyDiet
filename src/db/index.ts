@@ -1,8 +1,8 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
-import type { AlimentoPersonale, Impostazioni, PastoPreferito, UnitaAlimento, VoceDiario } from '../lib/tipi';
+import type { AlimentoPersonale, Impostazioni, PastoPreferito, Pesata, UnitaAlimento, VoceDiario } from '../lib/tipi';
 
 export const DB_NAME = 'mydiet';
-export const DB_VERSION = 4;
+export const DB_VERSION = 5;
 
 /** Alimento personale come salvato: con la chiave nome + marca per l'unicità. */
 export type AlimentoPersonaleSalvato = AlimentoPersonale & { chiave: string };
@@ -31,6 +31,11 @@ export interface MyDietDB extends DBSchema {
     key: string;
     value: PastoPreferito;
   };
+  /** pesate, una per giorno, con la data come chiave */
+  peso: {
+    key: string;
+    value: Pesata;
+  };
 }
 
 
@@ -50,6 +55,9 @@ export function getDb(): Promise<IDBPDatabase<MyDietDB>> {
       }
       if (oldVersion < 4) {
         db.createObjectStore('pastiPreferiti', { keyPath: 'id' });
+      }
+      if (oldVersion < 5) {
+        db.createObjectStore('peso', { keyPath: 'data' });
       }
     },
     blocking() {

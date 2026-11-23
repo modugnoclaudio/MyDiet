@@ -127,7 +127,7 @@ export function scalaAsse(valoreMassimo: number): { massimo: number; tacche: num
   return { massimo, tacche: Array.from({ length: massimo / passo + 1 }, (_, i) => i * passo) };
 }
 
-const MESI = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'];
+export const MESI = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'];
 
 /** Titolo del periodo, es. "21–27 settembre 2026", "28 settembre – 4 ottobre 2026", "settembre 2026". */
 export function etichettaPeriodo(periodo: Periodo): string {

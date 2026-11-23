@@ -7,12 +7,14 @@ import {
   type ElementoPasto,
   type Pasto,
   type PastoPreferito,
+  type Pesata,
   type Ricetta,
   type Unita,
   type UnitaAlimento,
   type ValoriNutrizionali,
   type VoceDiario,
 } from './tipi';
+import { validaPeso } from './peso';
 import { validaRicetta, valoriRicetta } from './ricette';
 import { validaQuantitaUnita, validaUnita } from './unita';
 import { validaGrammi, validaObiettivoKcal, validaValoriPer100g } from './validazione';
@@ -20,9 +22,10 @@ import { validaGrammi, validaObiettivoKcal, validaValoriPer100g } from './valida
 export const APP_BACKUP = 'MyDiet';
 /**
  * Formato attuale. Restano importabili il formato 1 (senza unità), il
- * formato 2 (senza pasti preferiti) e il formato 3 (senza ricette).
+ * formato 2 (senza pasti preferiti), il formato 3 (senza ricette) e il
+ * formato 4 (senza peso).
  */
-export const FORMATO_BACKUP = 4;
+export const FORMATO_BACKUP = 5;
 
 /** Tutti i dati dell'utente. */
 export interface DatiUtente {
@@ -32,6 +35,8 @@ export interface DatiUtente {
   /** unità definite dall'utente, per alimento */
   unita: UnitaAlimento[];
   pastiPreferiti: PastoPreferito[];
+  /** pesate, una per giorno */
+  peso: Pesata[];
 }
 
 export interface FileBackup extends DatiUtente {
@@ -189,14 +194,21 @@ function leggiPastoPreferito(valore: unknown): PastoPreferito | undefined {
 
 function leggiImpostazioni(valore: unknown): Impostazioni | undefined {
   if (!oggetto(valore)) return undefined;
-  const { obiettivoKcal, ultimoBackup } = valore;
+  const { obiettivoKcal, ultimoBackup, pesoObiettivo } = valore;
   const obiettivoValido =
     obiettivoKcal === null ||
     obiettivoKcal === undefined ||
     (numero(obiettivoKcal) && validaObiettivoKcal(obiettivoKcal).length === 0);
   const backupValido = ultimoBackup === null || ultimoBackup === undefined || dataValida(ultimoBackup);
-  if (!obiettivoValido || !backupValido) return undefined;
-  return { obiettivoKcal: obiettivoKcal ?? null, ultimoBackup: ultimoBackup ?? null };
+  const pesoValido =
+    pesoObiettivo === null || pesoObiettivo === undefined || (numero(pesoObiettivo) && validaPeso(pesoObiettivo).length === 0);
+  if (!obiettivoValido || !backupValido || !pesoValido) return undefined;
+  return { obiettivoKcal: obiettivoKcal ?? null, ultimoBackup: ultimoBackup ?? null, pesoObiettivo: pesoObiettivo ?? null };
+}
+
+function leggiPesata(valore: unknown): Pesata | undefined {
+  if (!oggetto(valore) || !dataValida(valore.data) || !numero(valore.kg) || validaPeso(valore.kg).length > 0) return undefined;
+  return { data: valore.data, kg: valore.kg };
 }
 
 function elenco<T>(
@@ -233,7 +245,7 @@ export function leggiBackup(contenuto: string): EsitoBackup {
   if (!oggetto(dati) || dati.app !== APP_BACKUP) {
     return { ok: false, errori: ['Il file non è un backup di MyDiet.'] };
   }
-  if (dati.formato !== 1 && dati.formato !== 2 && dati.formato !== 3 && dati.formato !== FORMATO_BACKUP) {
+  if (![1, 2, 3, 4, FORMATO_BACKUP].includes(dati.formato as number)) {
     return {
       ok: false,
       errori: ['Il backup è stato creato da una versione diversa di MyDiet e non può essere importato.'],
@@ -241,11 +253,13 @@ export function leggiBackup(contenuto: string): EsitoBackup {
   }
   const unitaGrezze = dati.formato === 1 ? [] : dati.unita;
   const pastiGrezzi = dati.formato === 1 || dati.formato === 2 ? [] : dati.pastiPreferiti;
+  const pesoGrezzo = dati.formato === FORMATO_BACKUP ? dati.peso : [];
   if (
     !Array.isArray(dati.alimenti) ||
     !Array.isArray(dati.diario) ||
     !Array.isArray(unitaGrezze) ||
     !Array.isArray(pastiGrezzi) ||
+    !Array.isArray(pesoGrezzo) ||
     typeof dati.esportato !== 'string'
   ) {
     return { ok: false, errori: ['Il backup è incompleto o danneggiato.'] };
@@ -256,13 +270,15 @@ export function leggiBackup(contenuto: string): EsitoBackup {
   const diario = elenco(dati.diario, leggiVoce, (n) => `La voce del diario n. ${n} non è valida.`, errori);
   const unita = elenco(unitaGrezze, leggiUnitaAlimento, (n) => `Le unità n. ${n} non sono valide.`, errori);
   const pastiPreferiti = elenco(pastiGrezzi, leggiPastoPreferito, (n) => `Il pasto preferito n. ${n} non è valido.`, errori);
+  const peso = elenco(pesoGrezzo, leggiPesata, (n) => `La pesata n. ${n} non è valida.`, errori);
   const impostazioni = leggiImpostazioni(dati.impostazioni);
   if (!impostazioni) errori.push('Le impostazioni non sono valide.');
   if (
     duplicati(alimenti.map((a) => a.id)) ||
     duplicati(diario.map((v) => v.id)) ||
     duplicati(unita.map((u) => u.alimentoId)) ||
-    duplicati(pastiPreferiti.map((p) => p.id))
+    duplicati(pastiPreferiti.map((p) => p.id)) ||
+    duplicati(peso.map((p) => p.data))
   ) {
     errori.push('Il backup contiene dati ripetuti.');
   }
@@ -282,6 +298,7 @@ export function leggiBackup(contenuto: string): EsitoBackup {
       impostazioni,
       unita,
       pastiPreferiti,
+      peso,
     },
   };
 }
@@ -290,14 +307,16 @@ export interface RiepilogoDati {
   alimenti: number;
   voci: number;
   giorni: number;
+  pesate: number;
 }
 
-/** Quanti alimenti, voci e giorni contengono i dati. */
-export function riepilogoDati(dati: Pick<DatiUtente, 'alimenti' | 'diario'>): RiepilogoDati {
+/** Quanti alimenti, voci, giorni e pesate contengono i dati. */
+export function riepilogoDati(dati: Pick<DatiUtente, 'alimenti' | 'diario' | 'peso'>): RiepilogoDati {
   return {
     alimenti: dati.alimenti.length,
     voci: dati.diario.length,
     giorni: new Set(dati.diario.map((voce) => voce.data)).size,
+    pesate: dati.peso.length,
   };
 }
 

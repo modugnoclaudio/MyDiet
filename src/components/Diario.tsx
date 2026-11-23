@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks';
 import { spostaGiorni } from '../lib/date';
 import { totaleVoci } from '../lib/diario';
-import { etichettaGiorno, formattaData } from '../lib/formato';
-import { PASTI, type Impostazioni, type Pasto, type VoceDiario } from '../lib/tipi';
+import { etichettaGiorno, formattaData, formattaNumero } from '../lib/formato';
+import { PASTI, type Impostazioni, type Pasto, type Pesata, type VoceDiario } from '../lib/tipi';
 import { leggiVociDelGiorno } from '../db/diario';
 import { leggiImpostazioni } from '../db/impostazioni';
+import { leggiPesata } from '../db/peso';
 import { AggiungiVoce } from './AggiungiVoce';
+import { ModificaPeso } from './ModificaPeso';
 import { ModificaVoce } from './ModificaVoce';
 import { RiepilogoGiorno } from './RiepilogoGiorno';
 import { SalvaPastoPreferito } from './SalvaPastoPreferito';
@@ -25,13 +27,20 @@ export function Diario({ data, oggi, onCambiaData }: Props) {
   const [inModifica, setInModifica] = useState<VoceDiario | null>(null);
   const [daSalvare, setDaSalvare] = useState<{ pasto: Pasto; voci: VoceDiario[] } | null>(null);
   const [messaggio, setMessaggio] = useState('');
+  const [pesata, setPesata] = useState<Pesata | undefined>(undefined);
+  const [modificaPeso, setModificaPeso] = useState(false);
   const sceltaData = useRef<HTMLInputElement>(null);
   const titolo = etichettaGiorno(data, oggi, spostaGiorni(oggi, -1));
 
   const carica = useCallback(async () => {
-    const [vociGiorno, impostazioniSalvate] = await Promise.all([leggiVociDelGiorno(data), leggiImpostazioni()]);
+    const [vociGiorno, impostazioniSalvate, pesataGiorno] = await Promise.all([
+      leggiVociDelGiorno(data),
+      leggiImpostazioni(),
+      leggiPesata(data),
+    ]);
     setVoci(vociGiorno);
     setImpostazioni(impostazioniSalvate);
+    setPesata(pesataGiorno);
   }, [data]);
 
   useEffect(() => {
@@ -42,6 +51,7 @@ export function Diario({ data, oggi, onCambiaData }: Props) {
   const chiudiAggiungi = useCallback(() => setAggiungiA(null), []);
   const chiudiModifica = useCallback(() => setInModifica(null), []);
   const chiudiSalvataggio = useCallback(() => setDaSalvare(null), []);
+  const chiudiPeso = useCallback(() => setModificaPeso(false), []);
 
   useEffect(() => setMessaggio(''), [data]);
 
@@ -118,6 +128,12 @@ export function Diario({ data, oggi, onCambiaData }: Props) {
               onSalvaPreferito={(p, v) => setDaSalvare({ pasto: p, voci: v })}
             />
           ))}
+          <section class="peso-giorno" aria-label="Peso">
+            <button type="button" class="riga" onClick={() => setModificaPeso(true)}>
+              <span class="riga-nome">Peso</span>
+              <span class="riga-kcal">{pesata ? `${formattaNumero(pesata.kg, 2)} kg` : '+ Registra il peso'}</span>
+            </button>
+          </section>
         </>
       )}
 
@@ -140,6 +156,17 @@ export function Diario({ data, oggi, onCambiaData }: Props) {
           onSalvato={(nome) => {
             setDaSalvare(null);
             setMessaggio(`Pasto preferito “${nome}” salvato.`);
+          }}
+        />
+      )}
+      {modificaPeso && (
+        <ModificaPeso
+          data={data}
+          kg={pesata?.kg}
+          onChiudi={chiudiPeso}
+          onCambiato={() => {
+            setModificaPeso(false);
+            void carica();
           }}
         />
       )}
