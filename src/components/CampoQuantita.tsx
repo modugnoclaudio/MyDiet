@@ -7,13 +7,14 @@ interface Props {
   /** unità scelta; `null` = grammi */
   unita: Unita | null;
   opzioni: readonly Unita[];
-  pasto: Pasto;
   onQuantita: (valore: string) => void;
   onUnita: (valore: Unita | null) => void;
-  onPasto: (valore: Pasto) => void;
+  /** pasto della voce del diario; assente per gli ingredienti di una ricetta */
+  pasto?: Pasto;
+  onPasto?: (valore: Pasto) => void;
 }
 
-/** Quantità (in grammi o in un'unità dell'alimento) e pasto di una voce del diario. */
+/** Quantità (in grammi o in un'unità dell'alimento) ed eventuale pasto di una voce del diario. */
 export function CampoQuantita({ quantita, unita, opzioni, pasto, onQuantita, onUnita, onPasto }: Props) {
   const indice = unita ? opzioni.findIndex((u) => u.nome === unita.nome && u.grammi === unita.grammi) : -1;
   return (
@@ -48,16 +49,18 @@ export function CampoQuantita({ quantita, unita, opzioni, pasto, onQuantita, onU
           </select>
         </label>
       </div>
-      <label class="campo">
-        <span>Pasto</span>
-        <select value={pasto} onChange={(e) => onPasto(e.currentTarget.value as Pasto)}>
-          {PASTI.map((p) => (
-            <option key={p} value={p}>
-              {ETICHETTE_PASTI[p]}
-            </option>
-          ))}
-        </select>
-      </label>
+      {pasto && onPasto && (
+        <label class="campo">
+          <span>Pasto</span>
+          <select value={pasto} onChange={(e) => onPasto(e.currentTarget.value as Pasto)}>
+            {PASTI.map((p) => (
+              <option key={p} value={p}>
+                {ETICHETTE_PASTI[p]}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
     </>
   );
 }

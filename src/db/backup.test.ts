@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { creaBackup, leggiBackup, type DatiUtente } from '../lib/backup';
 import { creaVoce } from '../lib/diario';
-import { elencaAlimentiPersonali, salvaAlimentoPersonale } from './alimenti';
+import { elencaAlimentiPersonali, salvaAlimentoPersonale, salvaRicetta } from './alimenti';
 import { leggiTuttiIDati, sostituisciTuttiIDati } from './backup';
 import { aggiungiVoce, giorniConVoci, leggiVociDelGiorno } from './diario';
 import { leggiImpostazioni, salvaImpostazioni } from './impostazioni';
@@ -18,6 +18,10 @@ async function popola(): Promise<void> {
   await salvaUnitaPersonali(yogurt.id, [{ nome: 'vasetto', grammi: 125 }]);
   await salvaUnitaPersonali('crea-181100', [{ nome: 'uovo grande', grammi: 60 }]);
   await salvaPastoPreferito({ nome: 'Colazione tipo', elementi: [{ grammi: 125, alimento: { id: yogurt.id, nome: yogurt.nome, valori } }] });
+  await salvaRicetta({
+    nome: 'Yogurt con pane',
+    ricetta: { ingredienti: [{ grammi: 125, alimento: { id: yogurt.id, nome: yogurt.nome, valori } }], pesoFinale: 120, porzioni: 1 },
+  });
   await salvaImpostazioni({ obiettivoKcal: 1800 });
 }
 
@@ -27,7 +31,7 @@ describe('backup nel database', () => {
   it('legge tutti i dati, con il diario in ordine di data', async () => {
     await popola();
     const dati = await leggiTuttiIDati();
-    expect(dati.alimenti).toHaveLength(1);
+    expect(dati.alimenti).toHaveLength(2);
     expect(dati.alimenti[0]).not.toHaveProperty('chiave');
     expect(dati.diario.map((v) => v.data)).toEqual(['2026-09-22', '2026-09-24']);
     expect(dati.impostazioni).toEqual({ obiettivoKcal: 1800, ultimoBackup: null });

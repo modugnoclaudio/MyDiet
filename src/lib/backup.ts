@@ -7,20 +7,22 @@ import {
   type ElementoPasto,
   type Pasto,
   type PastoPreferito,
+  type Ricetta,
   type Unita,
   type UnitaAlimento,
   type ValoriNutrizionali,
   type VoceDiario,
 } from './tipi';
+import { validaRicetta, valoriRicetta } from './ricette';
 import { validaQuantitaUnita, validaUnita } from './unita';
 import { validaGrammi, validaObiettivoKcal, validaValoriPer100g } from './validazione';
 
 export const APP_BACKUP = 'MyDiet';
 /**
- * Formato attuale. Restano importabili il formato 1 (senza unità) e il
- * formato 2 (senza pasti preferiti).
+ * Formato attuale. Restano importabili il formato 1 (senza unità), il
+ * formato 2 (senza pasti preferiti) e il formato 3 (senza ricette).
  */
-export const FORMATO_BACKUP = 3;
+export const FORMATO_BACKUP = 4;
 
 /** Tutti i dati dell'utente. */
 export interface DatiUtente {
@@ -99,7 +101,29 @@ function leggiAlimento(valore: unknown): AlimentoPersonale | undefined {
   const marca = leggiMarca(valore.marca);
   const valori = leggiValori(valore.valori);
   if (!marca || !valori) return undefined;
-  return { id: valore.id, origine: 'personale', nome: valore.nome, ...marca, valori };
+  if (valore.ricetta === undefined) return { id: valore.id, origine: 'personale', nome: valore.nome, ...marca, valori };
+  const ricetta = leggiRicetta(valore.ricetta, valore.nome);
+  if (!ricetta) return undefined;
+  // I valori di una ricetta si ricalcolano dagli ingredienti, ignorando quelli del file.
+  return { id: valore.id, origine: 'personale', nome: valore.nome, ...marca, valori: valoriRicetta(ricetta), ricetta };
+}
+
+function leggiRicetta(valore: unknown, nome: string): Ricetta | undefined {
+  if (!oggetto(valore) || !Array.isArray(valore.ingredienti)) return undefined;
+  const { pesoFinale, porzioni } = valore;
+  if ((pesoFinale !== undefined && !numero(pesoFinale)) || (porzioni !== undefined && !numero(porzioni))) return undefined;
+  const ingredienti: ElementoPasto[] = [];
+  for (const i of valore.ingredienti) {
+    const letto = leggiElemento(i);
+    if (!letto) return undefined;
+    ingredienti.push(letto);
+  }
+  const ricetta: Ricetta = {
+    ingredienti,
+    ...(pesoFinale === undefined ? {} : { pesoFinale }),
+    ...(porzioni === undefined ? {} : { porzioni }),
+  };
+  return validaRicetta(nome, ricetta).length === 0 ? ricetta : undefined;
 }
 
 function leggiUnita(valore: unknown, altre: readonly Unita[]): Unita | undefined {
@@ -209,14 +233,14 @@ export function leggiBackup(contenuto: string): EsitoBackup {
   if (!oggetto(dati) || dati.app !== APP_BACKUP) {
     return { ok: false, errori: ['Il file non è un backup di MyDiet.'] };
   }
-  if (dati.formato !== 1 && dati.formato !== 2 && dati.formato !== FORMATO_BACKUP) {
+  if (dati.formato !== 1 && dati.formato !== 2 && dati.formato !== 3 && dati.formato !== FORMATO_BACKUP) {
     return {
       ok: false,
       errori: ['Il backup è stato creato da una versione diversa di MyDiet e non può essere importato.'],
     };
   }
   const unitaGrezze = dati.formato === 1 ? [] : dati.unita;
-  const pastiGrezzi = dati.formato === FORMATO_BACKUP ? dati.pastiPreferiti : [];
+  const pastiGrezzi = dati.formato === 1 || dati.formato === 2 ? [] : dati.pastiPreferiti;
   if (
     !Array.isArray(dati.alimenti) ||
     !Array.isArray(dati.diario) ||

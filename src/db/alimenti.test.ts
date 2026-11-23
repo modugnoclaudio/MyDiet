@@ -4,6 +4,7 @@ import {
   elencaAlimentiPersonali,
   leggiAlimentoPersonale,
   salvaAlimentoPersonale,
+  salvaRicetta,
 } from './alimenti';
 import { AlimentoDuplicatoError, DatiNonValidiError } from './errori';
 import { databaseVuoto } from './test-utils';
@@ -82,5 +83,43 @@ describe('alimenti personali', () => {
     await salvaUnitaPersonali(yogurt.id, [{ nome: 'vasetto', grammi: 125 }]);
     await eliminaAlimentoPersonale(yogurt.id);
     expect(await leggiUnitaPersonali(yogurt.id)).toEqual([]);
+  });
+});
+
+describe('ricette', () => {
+  const pasta = { id: 'crea-000800', nome: 'Pasta di semola', valori: { kcal: 341, carboidrati: 72.7, proteine: 13.5, grassi: 1.2, fibre: 1.7 } };
+  const olio = { id: 'crea-009210', nome: 'Olio di oliva extra vergine', valori: { kcal: 899, carboidrati: 0, proteine: 0, grassi: 99.9, fibre: 0 } };
+  const ingredienti = [
+    { grammi: 100, alimento: pasta },
+    { grammi: 10, alimento: olio },
+  ];
+
+  it('salva una ricetta calcolando i valori per 100 g dal peso finale', async () => {
+    const salvata = await salvaRicetta({ nome: ' Pasta  all’olio ', ricetta: { ingredienti, pesoFinale: 250, porzioni: 2 } });
+    expect(salvata).toMatchObject({ origine: 'personale', nome: 'Pasta all’olio', ricetta: { pesoFinale: 250, porzioni: 2 } });
+    // (341 + 89,9) kcal in 250 g di piatto finito
+    expect(salvata.valori.kcal).toBeCloseTo(172.36, 6);
+    expect(await leggiAlimentoPersonale(salvata.id)).toEqual(salvata);
+  });
+
+  it('aggiorna la ricetta mantenendo l’id e ricalcolando i valori', async () => {
+    const salvata = await salvaRicetta({ nome: 'Pasta all’olio', ricetta: { ingredienti } });
+    const aggiornata = await salvaRicetta({ id: salvata.id, nome: 'Pasta all’olio', ricetta: { ingredienti: ingredienti.slice(0, 1) } });
+    expect(aggiornata.id).toBe(salvata.id);
+    expect(aggiornata.valori.kcal).toBeCloseTo(341, 6);
+    expect(await elencaAlimentiPersonali()).toHaveLength(1);
+  });
+
+  it('rifiuta ricette non valide e nomi già usati', async () => {
+    await expect(salvaRicetta({ nome: 'X', ricetta: { ingredienti: [] } })).rejects.toThrow(DatiNonValidiError);
+    await salvaAlimentoPersonale({ nome: 'Lasagna', valori });
+    await expect(salvaRicetta({ nome: 'lasagna', ricetta: { ingredienti } })).rejects.toThrow(AlimentoDuplicatoError);
+  });
+
+  it('non permette di sovrascrivere una ricetta con valori scritti a mano', async () => {
+    const salvata = await salvaRicetta({ nome: 'Pasta all’olio', ricetta: { ingredienti } });
+    const errore = await salvaAlimentoPersonale({ id: salvata.id, nome: 'Pasta all’olio', valori }).catch((e: unknown) => e);
+    expect(errore).toBeInstanceOf(DatiNonValidiError);
+    expect((await leggiAlimentoPersonale(salvata.id))?.ricetta).toBeDefined();
   });
 });

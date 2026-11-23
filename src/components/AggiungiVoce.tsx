@@ -19,6 +19,7 @@ import { Errori } from './Errori';
 import { GestioneUnita } from './GestioneUnita';
 import { ModuloAlimento } from './ModuloAlimento';
 import { Nutrienti } from './Nutrienti';
+import { RigaAlimento } from './RigaAlimento';
 
 interface Props {
   data: string;
@@ -82,11 +83,11 @@ export function AggiungiVoce({ data, pasto: pastoIniziale, onChiudi, onAggiunta 
       setUnita(precompilata.misura?.unita ?? null);
     } else {
       setQuantita('');
-      setUnita(unitaIniziale(unitaDisponibili(alimento, []), []));
+      setUnita(unitaIniziale(unitaDisponibili(alimento, []), [], alimento));
     }
     void leggiUnitaPersonali(alimento.id).then((personali) => {
       setUnitaPersonali(personali);
-      if (!precompilata) setUnita(unitaIniziale(unitaDisponibili(alimento, personali), personali));
+      if (!precompilata) setUnita(unitaIniziale(unitaDisponibili(alimento, personali), personali, alimento));
     });
   }
 
@@ -271,11 +272,7 @@ export function AggiungiVoce({ data, pasto: pastoIniziale, onChiudi, onAggiunta 
       <ul class="elenco risultati">
         {risultati.map((alimento) => (
           <li key={alimento.id}>
-            <button type="button" class="riga" onClick={() => scegli(alimento)}>
-              <span class="riga-nome">{nomeCompleto(alimento)}</span>
-              <span class="riga-dettaglio">{alimento.origine === 'base' ? alimento.categoria : 'Personale'}</span>
-              <span class="riga-kcal">{formattaNumero(alimento.valori.kcal)} kcal/100 g</span>
-            </button>
+            <RigaAlimento alimento={alimento} onScegli={(a) => scegli(a)} />
           </li>
         ))}
       </ul>

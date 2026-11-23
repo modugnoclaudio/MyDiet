@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { backupDaFare, creaBackup, leggiBackup, nomeFileBackup, riepilogoDati, type DatiUtente } from './backup';
+import { valoriRicetta } from './ricette';
+import type { Ricetta } from './tipi';
+
+const ricetta: Ricetta = {
+  ingredienti: [
+    { grammi: 100, alimento: { id: 'crea-000800', nome: 'Pasta di semola', valori: { kcal: 341, carboidrati: 72.7, proteine: 13.5, grassi: 1.2, fibre: 1.7 } } },
+    { grammi: 2, misura: { quantita: 2, unita: { nome: 'cucchiaino', grammi: 1 } }, alimento: { id: 'a2', nome: 'Pane di casa', valori: { kcal: 270, carboidrati: 55, proteine: 9, grassi: 1, fibre: 3 } } },
+  ],
+  pesoFinale: 250,
+  porzioni: 2,
+};
 
 const dati: DatiUtente = {
   alimenti: [
@@ -11,6 +22,7 @@ const dati: DatiUtente = {
       valori: { kcal: 97, carboidrati: 4, proteine: 9.5, grassi: 5 },
     },
     { id: 'a2', origine: 'personale', nome: 'Pane di casa', valori: { kcal: 270, carboidrati: 55, proteine: 9, grassi: 1, fibre: 3 } },
+    { id: 'a4', origine: 'personale', nome: 'Pasta al forno', valori: valoriRicetta(ricetta), ricetta },
   ],
   diario: [
     {
@@ -68,7 +80,7 @@ describe('creaBackup e leggiBackup', () => {
   it('rileggono esattamente i dati esportati', () => {
     expect(leggiBackup(creaBackup(dati, esportato))).toEqual({
       ok: true,
-      backup: { app: 'MyDiet', formato: 3, esportato: '2026-09-24T18:30:00.000Z', ...dati },
+      backup: { app: 'MyDiet', formato: 4, esportato: '2026-09-24T18:30:00.000Z', ...dati },
     });
   });
 
@@ -111,7 +123,7 @@ describe('backup nel formato 1 (prima delle unità)', () => {
     });
     const esito = leggiBackup(vecchio);
     expect(esito.ok && esito.backup.unita).toEqual([]);
-    expect(esito.ok && esito.backup.formato).toBe(3);
+    expect(esito.ok && esito.backup.formato).toBe(4);
     expect(esito.ok && esito.backup.pastiPreferiti).toEqual([]);
     expect(esito.ok && esito.backup.diario[0]).not.toHaveProperty('misura');
   });
@@ -130,6 +142,46 @@ describe('backup nel formato 2 (prima dei pasti preferiti)', () => {
   });
 });
 
+describe('backup nel formato 3 (prima delle ricette)', () => {
+  it('si importa ancora', () => {
+    const esito = leggiBackup(
+      modifica((b) => {
+        b.formato = 3;
+        (b.alimenti as unknown[]).pop();
+      }),
+    );
+    expect(esito.ok && esito.backup.alimenti).toEqual(dati.alimenti.slice(0, 2));
+    expect(esito.ok && esito.backup.pastiPreferiti).toEqual(dati.pastiPreferiti);
+  });
+});
+
+describe('ricette nel backup', () => {
+  function ricettaNelFile(b: Record<string, unknown>): Record<string, unknown> {
+    return (b.alimenti as Record<string, unknown>[])[2]!;
+  }
+
+  it('ricalcolano i valori dagli ingredienti, ignorando quelli del file', () => {
+    const esito = leggiBackup(modifica((b) => ((ricettaNelFile(b).valori as Record<string, unknown>).kcal = 1)));
+    expect(esito.ok && esito.backup.alimenti[2]!.valori).toEqual(valoriRicetta(ricetta));
+  });
+
+  it('rifiutano ingredienti, peso finale o porzioni non validi', () => {
+    for (const trasforma of [
+      (r: Record<string, unknown>) => (r.ricetta = { ingredienti: [] }),
+      (r: Record<string, unknown>) => (r.ricetta = 'pasta'),
+      (r: Record<string, unknown>) => ((r.ricetta as Record<string, unknown>).pesoFinale = '250'),
+      (r: Record<string, unknown>) => ((r.ricetta as Record<string, unknown>).pesoFinale = 10),
+      (r: Record<string, unknown>) => ((r.ricetta as Record<string, unknown>).porzioni = 2.5),
+      (r: Record<string, unknown>) => (((r.ricetta as Record<string, unknown>).ingredienti as Record<string, unknown>[])[0]!.grammi = -1),
+    ]) {
+      expect(leggiBackup(modifica((b) => trasforma(ricettaNelFile(b))))).toEqual({
+        ok: false,
+        errori: ['L’alimento n. 3 non è valido.'],
+      });
+    }
+  });
+});
+
 describe('leggiBackup rifiuta', () => {
   it('file che non sono JSON', () => {
     expect(leggiBackup('ciao')).toEqual({ ok: false, errori: ['Il file non è un backup di MyDiet: non è un file JSON valido.'] });
@@ -141,7 +193,7 @@ describe('leggiBackup rifiuta', () => {
   });
 
   it('formati di versioni diverse', () => {
-    expect(leggiBackup(modifica((b) => (b.formato = 4))).ok).toBe(false);
+    expect(leggiBackup(modifica((b) => (b.formato = 5))).ok).toBe(false);
   });
 
   it('pasti preferiti non validi', () => {
@@ -246,7 +298,7 @@ describe('nomeFileBackup', () => {
 
 describe('riepilogoDati', () => {
   it('conta alimenti, voci e giorni distinti', () => {
-    expect(riepilogoDati(dati)).toEqual({ alimenti: 2, voci: 3, giorni: 2 });
+    expect(riepilogoDati(dati)).toEqual({ alimenti: 3, voci: 3, giorni: 2 });
   });
 });
 

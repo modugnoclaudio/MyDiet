@@ -10,6 +10,7 @@ import {
   unitaDisponibili,
   unitaIniziale,
   unitaPerModifica,
+  unitaRicetta,
   validaQuantitaUnita,
   validaUnita,
 } from './unita';
@@ -19,6 +20,13 @@ function base(nome: string, porzione?: number): AlimentoBase {
   return { id: 'b', origine: 'base', nome, categoria: 'Uova', valori, ...(porzione === undefined ? {} : { porzione }) };
 }
 const yogurt: AlimentoPersonale = { id: 'p', origine: 'personale', nome: 'Yogurt greco', valori };
+const lasagna: AlimentoPersonale = {
+  id: 'r',
+  origine: 'personale',
+  nome: 'Lasagna',
+  valori,
+  ricetta: { ingredienti: [{ grammi: 1000, alimento: { id: 'x', nome: 'X', valori } }], pesoFinale: 1200, porzioni: 6 },
+};
 
 describe('unitaCrea', () => {
   it('per le uova di gallina intere usa "uovo"', () => {
@@ -64,7 +72,30 @@ describe('unitaDisponibili', () => {
   });
 });
 
+describe('unitaRicetta', () => {
+  it('per una ricetta con le porzioni dà il peso di una porzione', () => {
+    expect(unitaRicetta(lasagna)).toEqual([{ nome: 'porzione', grammi: 200 }]);
+  });
+
+  it('senza porzioni, o per gli altri alimenti, non dà unità', () => {
+    expect(unitaRicetta({ ...lasagna, ricetta: { ...lasagna.ricetta!, porzioni: undefined } })).toEqual([]);
+    expect(unitaRicetta(yogurt)).toEqual([]);
+    expect(unitaRicetta(base('Pasta di semola', 80))).toEqual([]);
+  });
+
+  it('è disponibile tra le unità, dopo quelle dell’utente', () => {
+    expect(unitaDisponibili(lasagna, [{ nome: 'teglia', grammi: 1200 }])).toEqual([
+      { nome: 'teglia', grammi: 1200 },
+      { nome: 'porzione', grammi: 200 },
+    ]);
+  });
+});
+
 describe('unitaIniziale', () => {
+  it('per una ricetta propone la sua porzione', () => {
+    expect(unitaIniziale(unitaDisponibili(lasagna, []), [], lasagna)).toEqual({ nome: 'porzione', grammi: 200 });
+  });
+
   it('preferisce la prima unità dell’utente', () => {
     const personali = [{ nome: 'vasetto', grammi: 125 }];
     expect(unitaIniziale(personali, personali)).toEqual({ nome: 'vasetto', grammi: 125 });

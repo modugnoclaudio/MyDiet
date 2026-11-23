@@ -1,4 +1,4 @@
-import { PASTI, type Alimento, type Pasto, type Unita, type ValoriNutrizionali, type VoceDiario } from './tipi';
+import { PASTI, type Alimento, type ElementoPasto, type Pasto, type Unita, type ValoriNutrizionali, type VoceDiario } from './tipi';
 import { sommaValori, valoriPerGrammi } from './valori';
 
 /** Valori nutrizionali effettivi di una voce del diario (in base ai grammi). */
@@ -26,20 +26,12 @@ export function totaliPerPasto(voci: readonly VoceDiario[]): Record<Pasto, Valor
 }
 
 /**
- * Dati di una nuova voce del diario: copia nome, marca e valori
- * dell'alimento, così modifiche successive all'alimento non la alterano.
+ * Quantità e copia di nome, marca e valori dell'alimento, così modifiche
+ * successive all'alimento non alterano voci del diario e ricette.
  */
-export function creaVoce(
-  alimento: Alimento,
-  data: string,
-  pasto: Pasto,
-  grammi: number,
-  misura?: { quantita: number; unita: Unita },
-): Omit<VoceDiario, 'id'> {
+export function creaElemento(alimento: Alimento, grammi: number, misura?: { quantita: number; unita: Unita }): ElementoPasto {
   const marca = alimento.origine === 'personale' ? alimento.marca : undefined;
   return {
-    data,
-    pasto,
     grammi,
     ...(misura ? { misura: { quantita: misura.quantita, unita: { ...misura.unita } } } : {}),
     alimento: {
@@ -49,4 +41,15 @@ export function creaVoce(
       valori: { ...alimento.valori },
     },
   };
+}
+
+/** Dati di una nuova voce del diario, con la copia dell'alimento (vedi `creaElemento`). */
+export function creaVoce(
+  alimento: Alimento,
+  data: string,
+  pasto: Pasto,
+  grammi: number,
+  misura?: { quantita: number; unita: Unita },
+): Omit<VoceDiario, 'id'> {
+  return { data, pasto, ...creaElemento(alimento, grammi, misura) };
 }

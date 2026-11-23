@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { creaVoce, totaleVoci, totaliPerPasto, valoriVoce, vociDelGiorno } from './diario';
+import { creaElemento, creaVoce, totaleVoci, totaliPerPasto, valoriVoce, vociDelGiorno } from './diario';
 import type { AlimentoBase, AlimentoPersonale, Pasto, VoceDiario } from './tipi';
 
 function voce(id: string, data: string, pasto: Pasto, grammi: number, fibre?: number): VoceDiario {
@@ -63,6 +63,25 @@ describe('totaliPerPasto', () => {
     expect(totali.cena.kcal).toBe(0);
     expect(totali.spuntino.kcal).toBe(0);
     expect(Object.keys(totali)).toEqual(['colazione', 'pranzo', 'cena', 'spuntino']);
+  });
+});
+
+describe('creaElemento', () => {
+  it('copia quantità, misura e alimento, senza gli ingredienti di una ricetta', () => {
+    const lasagna: AlimentoPersonale = {
+      id: 'r1',
+      origine: 'personale',
+      nome: 'Lasagna',
+      valori: { kcal: 160, carboidrati: 14, proteine: 8, grassi: 8 },
+      ricetta: { ingredienti: [], porzioni: 4 },
+    };
+    const misura = { quantita: 1, unita: { nome: 'porzione', grammi: 250 } };
+    const elemento = creaElemento(lasagna, 250, misura);
+    expect(elemento).toEqual({ grammi: 250, misura, alimento: { id: 'r1', nome: 'Lasagna', valori: lasagna.valori } });
+    lasagna.valori.kcal = 1;
+    misura.unita.grammi = 1;
+    expect(elemento.alimento.valori.kcal).toBe(160);
+    expect(elemento.misura?.unita.grammi).toBe(250);
   });
 });
 

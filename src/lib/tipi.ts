@@ -55,8 +55,10 @@ export interface AlimentoPersonale {
   origine: 'personale';
   nome: string;
   marca?: string;
-  /** per 100 g */
+  /** per 100 g; per le ricette sono calcolati dagli ingredienti */
   valori: ValoriNutrizionali;
+  /** presente se l'alimento è una ricetta fatta in casa */
+  ricetta?: Ricetta;
 }
 
 export type Alimento = AlimentoBase | AlimentoPersonale;
@@ -98,4 +100,16 @@ export interface PastoPreferito {
   id: string;
   nome: string;
   elementi: ElementoPasto[];
+}
+
+/**
+ * Ricetta fatta in casa: gli ingredienti sono copie (come le voci del diario),
+ * così modificare un alimento non cambia le ricette già salvate.
+ */
+export interface Ricetta {
+  ingredienti: ElementoPasto[];
+  /** peso del piatto finito in grammi (es. dopo la cottura); se assente, somma degli ingredienti */
+  pesoFinale?: number;
+  /** in quante porzioni si divide il piatto */
+  porzioni?: number;
 }

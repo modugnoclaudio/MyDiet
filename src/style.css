@@ -692,15 +692,22 @@ legend {
   font-size: 0.9rem;
 }
 
-.pasti-preferiti {
+.pasti-preferiti,
+.ricette {
   margin-top: 2rem;
 }
 
-.pasti-preferiti h2 {
+.pasti-preferiti h2,
+.ricette h2 {
   margin-bottom: 0.5rem;
 }
 
-.pasti-preferiti .elenco {
+.ricette .elenco {
+  margin-top: 0.75rem;
+}
+
+.pasti-preferiti .elenco,
+.ricette .elenco {
   background: var(--superficie);
   border: 1px solid var(--bordo);
   border-radius: var(--raggio);
