@@ -5,6 +5,7 @@
 [![Deploy su GitHub Pages](https://github.com/modugnoclaudio/MyDiet/actions/workflows/deploy.yml/badge.svg)](https://github.com/modugnoclaudio/MyDiet/actions/workflows/deploy.yml)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue.svg)](https://www.typescriptlang.org/)
 [![PWA](https://img.shields.io/badge/PWA-offline-green.svg)](https://web.dev/explore/progressive-web-apps)
+[![Licenza: MIT](https://img.shields.io/badge/Licenza-MIT-yellow.svg)](LICENSE)
 
 ### 👉 Usala online: **https://modugnoclaudio.github.io/MyDiet/**
 
@@ -134,6 +135,14 @@ I valori sono indicativi e non sostituiscono il parere di un medico o di un nutr
 - **Nessun codice a barre**: i prodotti confezionati vanno inseriti a mano con i valori dell'etichetta.
 - **Solo macronutrienti**: niente vitamine, minerali o sodio.
 - Gli alimenti di base non comprendono dolci, formaggi e salumi, che variano molto da marca a marca.
+
+---
+
+## Licenza
+
+Il codice è distribuito con licenza **MIT**: puoi usarlo, modificarlo e ridistribuirlo, anche per progetti tuoi, purché mantieni l'avviso di copyright e il testo della licenza. Vedi [LICENSE](LICENSE).
+
+La licenza MIT riguarda solo il codice. I valori nutrizionali degli alimenti di base (`src/data/alimenti-crea.json`) appartengono al CREA e si possono riprodurre solo citando la fonte, come indicato sotto.
 
 ---
 
